@@ -1,10 +1,10 @@
-name = "DoubleFloats"
-uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
+name = "DoubleFloatsX"
+uuid = "949356e3-18ca-4f00-99f2-e8b6fcaa5048"
 keywords = ["math", "floating-point", "doubledouble", "extended-precision", "accuracy", "precision"]
 license = "MIT"
 desc = "extended precision floating point types using value pairs"
-repo = "https://github.com/JuliaMath/DoubleFloats.jl.git"
-version = "1.12.0"
+repo = "https://github.com/AuroraDysis/DoubleFloatsX.jl.git"
+version = "0.1.0-DEV"
 
 [deps]
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"

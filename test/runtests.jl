@@ -1,4 +1,4 @@
-using DoubleFloats, LinearAlgebra
+using DoubleFloatsX, LinearAlgebra
 using Quadmath
 using Test
 
@@ -35,19 +35,19 @@ end
 # to cover functions that are not exported
 
 macro df(func)
-  :(DoubleFloats.$func)
+  :(DoubleFloatsX.$func)
 end
 macro df(func, arg)
-  :(DoubleFloats.$func($arg))
+  :(DoubleFloatsX.$func($arg))
 end
 macro df(func, arg1, arg2)
-  :(DoubleFloats.$func($arg1, $arg2))
+  :(DoubleFloatsX.$func($arg1, $arg2))
 end
 macro df(func, arg1, arg2, arg3)
-  :(DoubleFloats.$func($arg1, $arg2, $arg3))
+  :(DoubleFloatsX.$func($arg1, $arg2, $arg3))
 end
 macro df(func, arg1, arg2, arg3, arg4)
-  :(DoubleFloats.$func($arg1, $arg2, $arg3, $arg4))
+  :(DoubleFloatsX.$func($arg1, $arg2, $arg3, $arg4))
 end
 
 

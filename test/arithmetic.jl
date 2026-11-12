@@ -70,33 +70,33 @@ end
 end
 
 @testset "modpi" begin
-    @test iszero(DoubleFloats.mod1pi(Double64(pi)))
-    @test iszero(DoubleFloats.mod2pi(2*Double64(pi)))
-    @test iszero(DoubleFloats.modhalfpi(0.5*Double64(pi)))
-    @test iszero(DoubleFloats.modqrtrpi(0.25*Double64(pi)))
+    @test iszero(DoubleFloatsX.mod1pi(Double64(pi)))
+    @test iszero(DoubleFloatsX.mod2pi(2*Double64(pi)))
+    @test iszero(DoubleFloatsX.modhalfpi(0.5*Double64(pi)))
+    @test iszero(DoubleFloatsX.modqrtrpi(0.25*Double64(pi)))
 
-    @test iszero(DoubleFloats.mod1pi(Double32(pi)))
-    @test iszero(DoubleFloats.mod2pi(2*Double32(pi)))
-    @test iszero(DoubleFloats.modhalfpi(0.5*Double32(pi)))
-    @test iszero(DoubleFloats.modqrtrpi(0.25*Double32(pi)))
+    @test iszero(DoubleFloatsX.mod1pi(Double32(pi)))
+    @test iszero(DoubleFloatsX.mod2pi(2*Double32(pi)))
+    @test iszero(DoubleFloatsX.modhalfpi(0.5*Double32(pi)))
+    @test iszero(DoubleFloatsX.modqrtrpi(0.25*Double32(pi)))
 
-    @test 0 < DoubleFloats.mod1pi(Double64(pi)*10) < eps(Double64(pi)*10)
-    @test 0 < DoubleFloats.mod2pi(Double64(pi)*10) < eps(2*Double64(pi)*10)
-    @test 0 < DoubleFloats.modhalfpi(Double64(pi)*10) < eps(0.5*Double64(pi)*10)
-    @test 0 < DoubleFloats.modqrtrpi(0.25*Double64(pi)*10) < eps(0.25*Double64(pi)*10)
+    @test 0 < DoubleFloatsX.mod1pi(Double64(pi)*10) < eps(Double64(pi)*10)
+    @test 0 < DoubleFloatsX.mod2pi(Double64(pi)*10) < eps(2*Double64(pi)*10)
+    @test 0 < DoubleFloatsX.modhalfpi(Double64(pi)*10) < eps(0.5*Double64(pi)*10)
+    @test 0 < DoubleFloatsX.modqrtrpi(0.25*Double64(pi)*10) < eps(0.25*Double64(pi)*10)
 
-    @test 0 < DoubleFloats.mod1pi(Double32(pi)*10) < eps(Double32(pi)*10)
-    @test 0 < DoubleFloats.mod2pi(Double32(pi)*10) < eps(2*Double32(pi)*10)
-    @test 0 < DoubleFloats.modhalfpi(Double32(pi)*10) < eps(0.5*Double32(pi)*10)
-    @test 0 < DoubleFloats.modqrtrpi(0.25*Double32(pi)*10) < eps(0.25*Double32(pi)*10)
+    @test 0 < DoubleFloatsX.mod1pi(Double32(pi)*10) < eps(Double32(pi)*10)
+    @test 0 < DoubleFloatsX.mod2pi(Double32(pi)*10) < eps(2*Double32(pi)*10)
+    @test 0 < DoubleFloatsX.modhalfpi(Double32(pi)*10) < eps(0.5*Double32(pi)*10)
+    @test 0 < DoubleFloatsX.modqrtrpi(0.25*Double32(pi)*10) < eps(0.25*Double32(pi)*10)
 end
 
 @testset "rempi" begin
-    @test iszero(DoubleFloats.rem2pi(2*Double64(pi)))
-    @test iszero(DoubleFloats.rem2pi(2*Double32(pi)))
+    @test iszero(DoubleFloatsX.rem2pi(2*Double64(pi)))
+    @test iszero(DoubleFloatsX.rem2pi(2*Double32(pi)))
 end
 
 @testset "hypot" begin
-    @test abs(DoubleFloats.hypot(Double64(1), Double64(1))^2 - 2) <= eps(eps(2.0))
-    @test abs(sum(DoubleFloats.normalize(Double64(1), Double64(1)))^2 - 2) <= eps(eps(2.0))
+    @test abs(DoubleFloatsX.hypot(Double64(1), Double64(1))^2 - 2) <= eps(eps(2.0))
+    @test abs(sum(DoubleFloatsX.normalize(Double64(1), Double64(1)))^2 - 2) <= eps(eps(2.0))
 end

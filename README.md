@@ -21,7 +21,8 @@ Every changed contract, one row each, with its regression id; `NOTICE` lists eve
 |---|---|
 | DFX-001 | The package is `DoubleFloatsX`, UUID `949356e3-18ca-4f00-99f2-e8b6fcaa5048`, with the module `DoubleFloatsX`: write `using DoubleFloatsX` and qualify as `DoubleFloatsX.mod2pi`. The exported type names are upstream's. Upstream's `DoubleFloats` can be loaded in the same process, and its types are distinct from these. |
 
-The text below is upstream's README.
+The text below is upstream's README, unchanged except that code using the package names it `DoubleFloatsX`; its
+installation section installs upstream's registered package (install this one by its URL, above).
 
 ---
 
@@ -75,7 +76,7 @@ relative performance: smaller is faster, the larger number takes proportionately
 
 ### Double64, Double32, Double16
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> dbl64 = sqrt(Double64(2)); 1 - dbl64 * inv(dbl64)
 0.0
@@ -122,7 +123,7 @@ julia> x - cosh(y)
 ```
 ### show, string, parse
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> x = sqrt(Double64(2)) / sqrt(Double64(6))
 0.5773502691896257
@@ -214,7 +215,7 @@ results for f(x), x in 1..2
 
 ## Good Ways To Use This
 
-In addition to simply `using DoubleFloats` and going from there, these two suggestions are easily managed
+In addition to simply `using DoubleFloatsX` and going from there, these two suggestions are easily managed
 and will go a long way in increasing the robustness of the work and reliability in the computational results.   
 
 If your input values are Float64s, map them to Double64s and proceed with your computation.  Then unmap your output values as Float64s, do additional work using those Float64s. With Float32 inputs, used Double32s similarly. Where throughput is important, and your algorithms are well-understood, this approach be used with the numerically sensitive parts of your computation only.  If you are doing that, be careful to map the inputs to those parts and unmap the outputs from those parts just as described above.

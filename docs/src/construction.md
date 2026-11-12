@@ -3,7 +3,7 @@
 ## from Integers, Floats and Rationals
 
 ```julia
-using DoubleFloats
+using DoubleFloatsX
 
 a1 = Double64(22) / 7
 a2 = df64"22" / df64"7"
@@ -21,7 +21,7 @@ c1 === c2
 ## from two Reals
 
 ```julia
-using DoubleFloats
+using DoubleFloatsX
 
 a = 10.0
 b = cbrt(10.0)

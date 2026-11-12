@@ -18,7 +18,7 @@ end
     frexps(x::DoubleFloat)
 
 Applies `Base.frexp` to both `hi` and `lo` parts, and returns a tuple of tuples.
-See also `DoubleFloats.ldexps` for the inverse, and `DoubleFloats.signs` similar tuple.
+See also `DoubleFloatsX.ldexps` for the inverse, and `DoubleFloatsX.signs` similar tuple.
 """
 function frexps(x::DoubleFloat{T}) where {T<:IEEEFloat}
     frhi, exphi = frexp(HI(x))

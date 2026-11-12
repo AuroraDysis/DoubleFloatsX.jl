@@ -22,7 +22,7 @@
     @test isinf(frexp(T(Inf))[1])
     @test iszero(frexp(T(0))[1])
 
-    @test DoubleFloats.ldexps(DoubleFloats.frexps(val)...,) == val
+    @test DoubleFloatsX.ldexps(DoubleFloatsX.frexps(val)...,) == val
     # @test ldexp(significand(val), exponent(val)) == val
 
     @test signs(val) == (sign(HI(val)), sign(LO(val)))

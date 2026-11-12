@@ -31,10 +31,10 @@ In descending order of preference:
 ### Step 1: place and wire the code
 
 - Implementation files live under `src/math/elementary/` (or
-  `src/math/special/`), included from `src/DoubleFloats.jl`.
+  `src/math/special/`), included from `src/DoubleFloatsX.jl`.
 - Extend the appropriate `Base`/`SpecialFunctions` function: check that
   the name appears in the `import` lists at the top of
-  `src/DoubleFloats.jl` (and in `export` if it is package-specific like
+  `src/DoubleFloatsX.jl` (and in `export` if it is package-specific like
   `agm`).  A `function foo(...)` for a name that was *not* imported
   creates a new local function that users will never reach.
 - Write for the generic signature

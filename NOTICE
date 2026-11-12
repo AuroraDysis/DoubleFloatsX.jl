@@ -11,3 +11,6 @@ Modifications (each changed contract is a row of README.md, "Differences from up
 - 2026-11-12: upstream's GitHub workflows and Dependabot configuration removed (this repository runs no hosted CI);
   the stray src/math/.DS_Store removed; the family's tooling added (AGENTS.md, NOTICE, UPSTREAM.toml, justfile,
   .githooks/, tools/, format/, .JuliaFormatter.toml).
+- 2026-11-12: the package renamed DoubleFloatsX with its own UUID and version 0.1.0-DEV, Project.toml's repo naming
+  this repository; its module and every qualification by the old name in code renamed; the exported type names
+  unchanged (DFX-001).

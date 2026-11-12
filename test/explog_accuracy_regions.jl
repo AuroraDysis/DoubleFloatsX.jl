@@ -8,7 +8,7 @@
 import Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using DoubleFloats
+using DoubleFloatsX
 using Random
 
 setprecision(BigFloat, 512)

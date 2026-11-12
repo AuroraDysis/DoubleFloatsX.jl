@@ -9,7 +9,7 @@
 #     symmetric QR (GenericSchur.geigen!), giving real eigenvalues and
 #     orthonormal eigenvectors
 #
-# The methods below make DoubleFloats own this route explicitly, rather than
+# The methods below make DoubleFloatsX own this route explicitly, rather than
 # depending on dispatch details of LinearAlgebra's generic fallbacks, and
 # normalize the results to the conventions of the LAPACK route for Float64:
 #   * hermitian input (detected, or passed as Symmetric/Hermitian) yields

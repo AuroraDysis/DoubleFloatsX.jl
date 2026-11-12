@@ -63,10 +63,10 @@ git-tree-sha1 = "56e9c37b5e7c3b4f080ab1da18d72d5c290e184a"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "1.17.0"
 
-[[deps.DoubleFloats]]
+[[deps.DoubleFloatsX]]
 deps = ["GenericLinearAlgebra", "GenericSchur", "LinearAlgebra", "Printf", "Quadmath", "Random", "SpecialFunctions"]
 path = ".."
-uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
+uuid = "949356e3-18ca-4f00-99f2-e8b6fcaa5048"
 version = "1.11.0"
 
 [[deps.Downloads]]

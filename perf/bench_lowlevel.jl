@@ -1,5 +1,5 @@
 using Random
-using DoubleFloats
+using DoubleFloatsX
 
 try
     using BenchmarkTools
@@ -23,7 +23,7 @@ const XT = [(rand() + 0.5, rand() * eps(Float64)) for _ in 1:N]
 function bench_two_sum(xs, ys)
     acc = 0.0
     @inbounds for i in eachindex(xs, ys)
-        hi, lo = DoubleFloats.two_sum(xs[i], ys[i])
+        hi, lo = DoubleFloatsX.two_sum(xs[i], ys[i])
         acc += hi + lo
     end
     acc
@@ -32,7 +32,7 @@ end
 function bench_two_diff(xs, ys)
     acc = 0.0
     @inbounds for i in eachindex(xs, ys)
-        hi, lo = DoubleFloats.two_diff(xs[i], ys[i])
+        hi, lo = DoubleFloatsX.two_diff(xs[i], ys[i])
         acc += hi + lo
     end
     acc
@@ -43,7 +43,7 @@ function bench_two_hilo_sum(xs, ys)
     @inbounds for i in eachindex(xs, ys)
         a = max(xs[i], ys[i])
         b = min(xs[i], ys[i])
-        hi, lo = DoubleFloats.two_hilo_sum(a, b)
+        hi, lo = DoubleFloatsX.two_hilo_sum(a, b)
         acc += hi + lo
     end
     acc
@@ -52,7 +52,7 @@ end
 function bench_two_prod(xs, ys)
     acc = 0.0
     @inbounds for i in eachindex(xs, ys)
-        hi, lo = DoubleFloats.two_prod(xs[i], ys[i])
+        hi, lo = DoubleFloatsX.two_prod(xs[i], ys[i])
         acc += hi + lo
     end
     acc
@@ -61,7 +61,7 @@ end
 function bench_two_inv(xs)
     acc = 0.0
     @inbounds for x in xs
-        hi, lo = DoubleFloats.two_inv(x)
+        hi, lo = DoubleFloatsX.two_inv(x)
         acc += hi + lo
     end
     acc
@@ -70,7 +70,7 @@ end
 function bench_two_dvi(xs, ys)
     acc = 0.0
     @inbounds for i in eachindex(xs, ys)
-        hi, lo = DoubleFloats.two_dvi(xs[i], ys[i])
+        hi, lo = DoubleFloatsX.two_dvi(xs[i], ys[i])
         acc += hi + lo
     end
     acc
@@ -79,7 +79,7 @@ end
 function bench_two_sqrt(xs)
     acc = 0.0
     @inbounds for x in xs
-        hi, lo = DoubleFloats.two_sqrt(x)
+        hi, lo = DoubleFloatsX.two_sqrt(x)
         acc += hi + lo
     end
     acc
@@ -88,7 +88,7 @@ end
 function bench_inv_dd_dd(xt)
     acc = 0.0
     @inbounds for x in xt
-        hi, lo = DoubleFloats.inv_dd_dd(x)
+        hi, lo = DoubleFloatsX.inv_dd_dd(x)
         acc += hi + lo
     end
     acc
@@ -97,8 +97,8 @@ end
 function bench_fma_dddd(xh, xl, yh, yl, zh, zl)
     acc = 0.0
     @inbounds for i in eachindex(xh)
-        z = DoubleFloats.fma(xh[i], xl[i], yh[i], yl[i], zh[i], zl[i])
-        acc += DoubleFloats.HI(z) + DoubleFloats.LO(z)
+        z = DoubleFloatsX.fma(xh[i], xl[i], yh[i], yl[i], zh[i], zl[i])
+        acc += DoubleFloatsX.HI(z) + DoubleFloatsX.LO(z)
     end
     acc
 end
@@ -106,8 +106,8 @@ end
 function bench_fma_fpdd(xh, yh, zh, zl)
     acc = 0.0
     @inbounds for i in eachindex(xh)
-        z = DoubleFloats.fma(xh[i], yh[i], zh[i], zl[i])
-        acc += DoubleFloats.HI(z) + DoubleFloats.LO(z)
+        z = DoubleFloatsX.fma(xh[i], yh[i], zh[i], zl[i])
+        acc += DoubleFloatsX.HI(z) + DoubleFloatsX.LO(z)
     end
     acc
 end
@@ -115,8 +115,8 @@ end
 function bench_fma_ddfp(xh, xl, yh, yl, zh)
     acc = 0.0
     @inbounds for i in eachindex(xh)
-        z = DoubleFloats.fma(xh[i], xl[i], yh[i], yl[i], zh[i])
-        acc += DoubleFloats.HI(z) + DoubleFloats.LO(z)
+        z = DoubleFloatsX.fma(xh[i], xl[i], yh[i], yl[i], zh[i])
+        acc += DoubleFloatsX.HI(z) + DoubleFloatsX.LO(z)
     end
     acc
 end

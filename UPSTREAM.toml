@@ -18,3 +18,8 @@ tree = "00720e467f998dc28d6bd3ec2fe33b1d04155f6c"
 [package]
 name = "DoubleFloatsX"
 uuid = "949356e3-18ca-4f00-99f2-e8b6fcaa5048"
+
+# One row per change carried on top of upstream, its id the README's "Differences from upstream" row
+[[patch]]
+id = "DFX-001"
+summary = "the package renamed DoubleFloatsX with its own UUID and this repository as its repo; its module and qualifications renamed; the exported type names upstream's"

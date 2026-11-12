@@ -1,12 +1,12 @@
 """
-    DoubleFloats
+    DoubleFloatsX
 
 A package for extended precision floating point math.
 
 exported types: `Double64`, `Double32`, `Double16`
                 `ComplexDF64`, `ComplexDF32`, `ComplexDF16`
 """
-module DoubleFloats
+module DoubleFloatsX
 
 abstract type MultipartFloat <: AbstractFloat end
 
@@ -136,7 +136,7 @@ import SpecialFunctions: erf, erfc, gamma, logabsgamma,
     ellipk
 include("math/special/specialfunctions.jl")
 
-end # module DoubleFloats
+end # module DoubleFloatsX
 
 
 

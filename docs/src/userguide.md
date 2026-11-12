@@ -22,7 +22,7 @@ immutable bitstypes with no per-operation allocation.
 ## Constructing values
 
 ```julia
-using DoubleFloats
+using DoubleFloatsX
 
 Double64(2)          # exact: integers convert exactly
 Double64(2) / 10     # 0.2 to full Double64 precision
@@ -83,7 +83,7 @@ including arbitrarily close to `m = 1`).
 ## Linear algebra
 
 ```julia
-using DoubleFloats, LinearAlgebra
+using DoubleFloatsX, LinearAlgebra
 ```
 
 Everything routine works with `Double64`/`ComplexDF64` matrices:

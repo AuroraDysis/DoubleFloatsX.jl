@@ -36,7 +36,7 @@ Comparing Double64 and BigFloat after setting BigFloat precision to 106 bits.
 
 ### Double64, Double32, Double16
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> dbl64 = sqrt(Double64(2)); 1 - dbl64 * inv(dbl64)
 0.0
@@ -75,7 +75,7 @@ julia> x - cosh(y)
 ```
 ### show, string, parse
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> x = sqrt(Double64(2)) / sqrt(Double64(6))
 0.5773502691896257
@@ -107,7 +107,7 @@ julia> stringtyped(x)
 
 ### golden ratio
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> ϕ = Double32(MathConstants.golden)
 1.61803398874989490

@@ -30,11 +30,11 @@ const cosC_h = map(x -> HI(x), cosC); const cosC_l = map(x -> LO(x), cosC)
     yl = fma(ah, ah, -yh)
     Sh = sinS_h[9]; Sl = sinS_l[9]
     for k in 8:-1:1
-        Sh, Sl = DoubleFloats._horner_step(sinS_h[k], sinS_l[k], yh, Sh, Sl)
+        Sh, Sl = DoubleFloatsX._horner_step(sinS_h[k], sinS_l[k], yh, Sh, Sl)
     end
     Ch = cosC_h[10]; Cl = cosC_l[10]
     for k in 9:-1:1
-        Ch, Cl = DoubleFloats._horner_step(cosC_h[k], cosC_l[k], yh, Ch, Cl)
+        Ch, Cl = DoubleFloatsX._horner_step(cosC_h[k], cosC_l[k], yh, Ch, Cl)
     end
     Sp = -0.16666666666666666 + yh*(0.016666666666666666 +
           yh*(-0.0005952380952380953 + yh*1.1022927689594356e-5))

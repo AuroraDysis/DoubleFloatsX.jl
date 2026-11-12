@@ -26,7 +26,7 @@ ComplexDF32(Double32(1.4142135, 2.4203235e-8), Double32(1.4422495, 3.3793125e-8)
 
 ## String
 ```julia
-julia> using DoubleFloats
+julia> using DoubleFloatsX
 
 julia> x = sqrt(Double64(2)) / sqrt(Double64(6))
 0.5773502691896257
