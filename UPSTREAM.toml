@@ -1,0 +1,20 @@
+# The upstream package this repository carries under its own name, the release it was admitted at, and the patches
+# carried on top of it. The commit guard (.githooks/pre-commit) and tools/family-scope.sh read [upstream] commit and
+# name and [package] name: the paths upstream's tree at that commit holds, the package's name in a path mapped back
+# to upstream's, keep upstream's style; every other path is the family's.
+
+[upstream]
+name = "DoubleFloats"
+uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
+url = "https://github.com/JuliaMath/DoubleFloats.jl"
+license = "MIT"
+tag = "v1.12.0"
+# the annotated tag object, fetched here as refs/tags/upstream/v1.12.0
+tag_object = "c84914163eefde0c685560c3f8c5526c5dd3de49"
+commit = "60b72cae8a53577c170afab0d48a011a853d1a96"
+# the commit's git tree, equal to the git-tree-sha1 the General registry records for DoubleFloats 1.12.0
+tree = "00720e467f998dc28d6bd3ec2fe33b1d04155f6c"
+
+[package]
+name = "DoubleFloatsX"
+uuid = "949356e3-18ca-4f00-99f2-e8b6fcaa5048"

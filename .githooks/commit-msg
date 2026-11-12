@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Message guard: the commit message, every line, through this repository's copy of the confidential scan, refused
+# unless it equals the wiki's master, with the wiki's lists (DAIDALOS_WIKI, else git config daidalos.wiki; fail
+# closed). The policy is the commit guard's: fork with the two allow lists joined when the index holds UPSTREAM.toml,
+# library otherwise. git runs it for a commit and for a merge's message alike; `git commit --no-verify` skips it, with
+# the reason in the message.
+set -u
+root=$(git rev-parse --show-toplevel) || exit 1
+wiki=${DAIDALOS_WIKI:-$(git -C "$root" config daidalos.wiki || true)}
+for list in tools/split/confidential_scan.py tools/split/confidential-words.txt tools/split/confidential-allow.txt tools/split/confidential-allow-fork.txt tools/split/confidential-identities.txt tools/mirrors/refs.tsv; do
+  [ -n "$wiki" ] && [ -r "$wiki/$list" ] || {
+    echo "commit-msg: set DAIDALOS_WIKI to the wiki's checkout, or run \`just hooks-install <path>\`; its tools/split/ holds the confidential scan and its lists" >&2
+    exit 1
+  }
+done
+cmp -s "$root/tools/checks/confidential_scan.py" "$wiki/tools/split/confidential_scan.py" || {
+  echo "commit-msg: tools/checks/confidential_scan.py differs from the wiki's master $wiki/tools/split/confidential_scan.py, or is missing: copy the master over it and commit it, the sync commit" >&2
+  exit 1
+}
+allow=$(mktemp "${TMPDIR:-/tmp}/family-commit-msg-allow-XXXXXX") || exit 1
+trap 'rm -f "$allow"' EXIT
+if git -C "$root" cat-file -e :UPSTREAM.toml 2> /dev/null; then
+  policy=fork
+  awk 1 "$wiki/tools/split/confidential-allow.txt" "$wiki/tools/split/confidential-allow-fork.txt" > "$allow" || {
+    echo "commit-msg: the wiki's two allow lists cannot be joined into one (above)" >&2
+    exit 1
+  }
+else
+  policy=library
+  cp "$wiki/tools/split/confidential-allow.txt" "$allow" || exit 1
+fi
+python3 "$root/tools/checks/confidential_scan.py" --policy "$policy" \
+  --words "$wiki/tools/split/confidential-words.txt" --allow "$allow" \
+  --identities "$wiki/tools/split/confidential-identities.txt" --refs "$wiki/tools/mirrors/refs.tsv" \
+  --message "$1" >&2 || {
+  echo "commit-msg: the confidential scan (policy $policy) refused the message (above): no commit message of this public repository names a private code, an address or a credential" >&2
+  exit 1
+}

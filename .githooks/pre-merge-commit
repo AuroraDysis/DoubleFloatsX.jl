@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Merge guard: git runs this hook before it records an automatic merge commit; the staged merge result goes through
+# the same guard as a commit (a merge stopped by a conflict is recorded by `git commit`, which runs pre-commit itself).
+exec "$(dirname "$0")/pre-commit"

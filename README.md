@@ -1,3 +1,30 @@
+# DoubleFloatsX.jl
+
+`DoubleFloatsX` is [DoubleFloats.jl](https://github.com/JuliaMath/DoubleFloats.jl) by JuliaMath under its own name
+and UUID, carrying upstream's history from its release v1.12.0. The exported types keep upstream's names
+(`DoubleFloat`, `Double64`, `Double32`, `Double16`), and the package loads beside upstream's `DoubleFloats`, whose
+types stay distinct from its own. It is tested by
+[ExtendedPrecisionTests](https://github.com/AuroraDysis/ExtendedPrecisionTests.jl). Please report nothing about this
+package to upstream.
+
+It is not in Julia's General registry; add it by its URL:
+
+```
+pkg> add https://github.com/AuroraDysis/DoubleFloatsX.jl
+```
+
+## Differences from upstream
+
+Every changed contract, one row each, with its regression id; `NOTICE` lists every modification.
+
+| Id | Difference |
+|---|---|
+| DFX-001 | The package is `DoubleFloatsX`, UUID `949356e3-18ca-4f00-99f2-e8b6fcaa5048`, with the module `DoubleFloatsX`: write `using DoubleFloatsX` and qualify as `DoubleFloatsX.mod2pi`. The exported type names are upstream's. Upstream's `DoubleFloats` can be loaded in the same process, and its types are distinct from these. |
+
+The text below is upstream's README.
+
+---
+
 # DoubleFloats.jl
 
 ### Math with 85+ accurate bits.

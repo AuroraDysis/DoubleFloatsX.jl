@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# Commit guard. Installed with `just hooks-install [<wiki>]` (core.hooksPath=.githooks, git config daidalos.wiki); the
+# Claude PreToolUse hook runs this same script, so every agent's commit meets one gate. Every check reads the STAGED
+# snapshot (the index), never the working copy. Bypass: `git commit --no-verify` with the reason in the message.
+#
+# Two modes, chosen by the index:
+# - A fork, whose staged UPSTREAM.toml names the upstream package, its admitted commit and the package's own name.
+#   Upstream's files keep upstream's style and checks: checks 1-3 and the confidential scan skip a staged blob equal
+#   to upstream's at the same path (as `just push` does, whose range scan reads a renamed file as a new one), check 4
+#   allows every top-level entry upstream's tree holds, the formatter reads only the family's scope (the staged paths
+#   that upstream's tree at the admitted commit does not hold, the package's name in a path mapped back to upstream's,
+#   so a renamed upstream file stays upstream's), and the scan's policy is fork, the shared and the forks' allow lists
+#   joined.
+# - A family package, with no UPSTREAM.toml: every path is the family's and the scan's policy is library.
+set -u
+# Paths are read one per line below, so git must print a non-ASCII name as it is (core.quotePath), or a staged λ.jl
+# would match no pattern and pass every check; set for this script's git and every helper it runs.
+n=${GIT_CONFIG_COUNT:-0}
+export "GIT_CONFIG_KEY_$n=core.quotePath" "GIT_CONFIG_VALUE_$n=false" GIT_CONFIG_COUNT=$((n + 1))
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+fail=0
+say() { echo "pre-commit: $*" >&2; fail=1; }
+
+# an index with unmerged entries (a merge or rebase in progress) holds stages that checkout-index skips, so they
+# would go unread: refuse it before selecting anything
+[ -z "$(git ls-files --unmerged)" ] || {
+  say "the index holds unmerged entries (a merge or rebase in progress); resolve and stage them before committing"
+  exit 1
+}
+changed=$(git diff --cached --name-only) # every staged path, deletions included
+[ -z "$changed" ] && exit 0
+staged=$(git diff --cached --name-only --diff-filter=ACMRT) # paths whose blob is in the index, type changes included
+
+# The mode, from the staged UPSTREAM.toml: the admitted upstream commit, upstream's package name and this package's
+upc="" from="" to=""
+if git cat-file -e :UPSTREAM.toml 2> /dev/null; then
+  read -r upc from to < <(git cat-file blob :UPSTREAM.toml | python3 -c '
+import sys, tomllib
+t = tomllib.loads(sys.stdin.read())
+print(t["upstream"]["commit"], t["upstream"]["name"], t["package"]["name"])' 2> /dev/null)
+  [ -n "$to" ] || {
+    say "the staged UPSTREAM.toml has no [upstream] commit and name and [package] name"
+    exit 1
+  }
+  git rev-parse -q --verify "$upc^{commit}" > /dev/null || {
+    say "UPSTREAM.toml's upstream commit $upc is not in this clone; fetch it from the upstream remote"
+    exit 1
+  }
+fi
+# upstream_path <path>: the path upstream's tree would hold the file at (the package's name mapped back to upstream's);
+# the names unquoted, since bash 3.2 keeps quotes in the replacement (a package name holds no glob character)
+upstream_path() { printf '%s' "${1//$to/$from}"; }
+# upstream_holds <path>: upstream's tree at the admitted commit holds the path (the rename mapped back)
+upstream_holds() { [ -n "$upc" ] && git cat-file -e "$upc:$(upstream_path "$1")" 2> /dev/null; }
+# upstream_blob <path>: the staged blob at <path> is upstream's blob at the same path, byte for byte (by object id)
+upstream_blob() {
+  [ -n "$upc" ] || return 1
+  local mine theirs
+  mine=$(git rev-parse -q --verify ":$1" 2> /dev/null) || return 1
+  theirs=$(git rev-parse -q --verify "$upc:$1" 2> /dev/null) || return 1
+  [ "$mine" = "$theirs" ]
+}
+blob_size() { git cat-file -s ":$1" 2> /dev/null || echo 0; }
+
+# 1. size: no staged blob over 1 MB; no commit adding over 5 MB in total; upstream's blobs exempt
+total=0
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  upstream_blob "$f" && continue
+  sz=$(blob_size "$f")
+  total=$((total + sz))
+  [ "$sz" -gt 1048576 ] && say "$f is $((sz / 1024)) KB as staged; files over 1 MB do not enter git"
+done <<< "$staged"
+[ "$total" -gt 5242880 ] && say "this commit adds $((total / 1048576)) MB; over 5 MB needs --no-verify and a reason"
+
+# 2. binary artefacts and images: none of the family's in this repository; upstream's blobs exempt
+while IFS= read -r f; do
+  case "$f" in
+    *.h5 | *.hdf5 | *.jld2 | *.jls | *.npy | *.npz | *.zip | *.tar | *.tgz | *.gz | *.xz | *.zst | *.7z | *.pdf | *.mp4 | *.mov | *.so | *.a | *.o | *.dylib | *.png | *.jpg | *.jpeg | *.gif | *.svg)
+      upstream_blob "$f" || say "$f: binary artefact; not stored in git"
+      ;;
+  esac
+done <<< "$staged"
+
+# 3. debris, matched on the basename so nested debris is caught too; upstream's blobs exempt
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  case "${f##*/}" in
+    *.orig | *.rej | *~ | *.bak | *.swp | .DS_Store | core | core.[0-9]* | *.log | *.tmp | Backtrace.*)
+      upstream_blob "$f" || say "$f: debris, not a source file"
+      ;;
+  esac
+done <<< "$staged"
+
+# 4. top-level allowlist: gates only NEW top-level entries, never deletions: the family's roots and, in a fork, every
+#    top-level entry upstream's tree holds at the admitted commit
+allow=" AGENTS.md README.md LICENSE NOTICE UPSTREAM.toml Project.toml src ext test tools format justfile .githooks .gitignore .JuliaFormatter.toml "
+[ -z "$upc" ] || allow="$allow$(git ls-tree --name-only "$upc" | tr '\n' ' ')"
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  top=${f%%/*}
+  case "$allow" in *" $top "*) ;; *)
+    git ls-tree --name-only HEAD "$top" 2> /dev/null | grep -q . ||
+      say "new top-level entry '$top': add it to the allowlist in .githooks/pre-commit with the reason in the commit"
+    ;;
+  esac
+done <<< "$staged"
+
+# The family's wiki holds the scan's master copy, which the copy here must equal, and the scan's lists (the private
+# codes' names are written once, in its tools/mirrors/refs.tsv): DAIDALOS_WIKI, else this clone's daidalos.wiki; fail
+# closed.
+wiki=${DAIDALOS_WIKI:-$(git config daidalos.wiki || true)}
+for list in tools/split/confidential_scan.py tools/split/confidential-words.txt tools/split/confidential-allow.txt tools/split/confidential-allow-fork.txt tools/split/confidential-identities.txt tools/mirrors/refs.tsv; do
+  [ -n "$wiki" ] && [ -r "$wiki/$list" ] || {
+    say "set DAIDALOS_WIKI to the wiki's checkout, or run \`just hooks-install <path>\`; its tools/split/ holds the confidential scan and its lists"
+    exit 1
+  }
+done
+
+# The checks below run on a materialised copy of the index (git checkout-index writes the index as it is) in $tree,
+# so a commit that changes a checker is judged by the checker it commits, and 5 refuses a staged scan copy that is not
+# the wiki's master byte for byte, so no commit replaces the scan with a weaker one; the scan reads each staged blob's
+# bytes from $scan, a symbolic link's target text included
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/family-precommit-XXXXXX") || exit 1
+trap 'rm -rf "$tmp"' EXIT
+tree=$tmp/tree scan=$tmp/scan
+git checkout-index -a --prefix="$tree/" 2> /dev/null || {
+  say "could not materialise the staged tree (git checkout-index failed)"
+  exit 1
+}
+
+# 8. every symbolic link in $tree resolves inside it: one that leaves it (an absolute target, or a relative one
+#    climbing out) would let a check below read a file the index does not hold (5's comparison of the scan copy with
+#    its master, 6's formatter). The copy is walked entry by entry, each classed by its lstat (os.walk would class an
+#    entry whose type it cannot read as a file and skip a directory behind it); a link that leaves is unlinked by
+#    Python on its own path, before any check reads the copy, and named in repr form; the commit is refused and the
+#    checks below still run. Any error while the copy is listed, a status or a link is read, or a link is resolved
+#    stops the guard (fail closed); only a target that is missing, runs through a file or loops is no error, since such
+#    a link reads nothing: a missing one is resolved again allowing only missing components, one through a file or in
+#    a loop is judged by its text from its real directory. Every read of a link raises its error as a RuntimeError, so
+#    no resolution takes a failed read for a missing component.
+if escaping=$(python3 -c '
+import errno, os, stat, sys
+read = os.readlink
+def readlink(path, *args, **kwargs):
+    try:
+        return read(path, *args, **kwargs)
+    except OSError as error:
+        raise RuntimeError(error) from error
+# relies on posixpath.realpath calling os.readlink through the module
+os.readlink = readlink
+tree = os.path.realpath(sys.argv[1], strict=True)
+found = []
+pending = [tree]
+while pending:
+    top = pending.pop()
+    with os.scandir(top) as entries:
+        names = [entry.name for entry in entries]
+    for name in names:
+        link = os.path.join(top, name)
+        mode = os.lstat(link).st_mode
+        if stat.S_ISDIR(mode):
+            pending.append(link)
+            continue
+        if not stat.S_ISLNK(mode):
+            continue
+        target = os.readlink(link)
+        try:
+            resolved = os.path.realpath(link, strict=True)
+        except OSError as error:
+            if error.errno not in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+                raise
+            try:
+                resolved = os.path.realpath(link, strict=os.path.ALLOW_MISSING)
+            except OSError as again:
+                if again.errno not in (errno.ENOTDIR, errno.ELOOP):
+                    raise
+                resolved = os.path.normpath(os.path.join(top, target))
+        if os.path.commonpath([tree, resolved]) != tree:
+            found.append((link, target))
+for link, target in found:
+    os.unlink(link)
+    print(f"{os.path.relpath(link, tree)!r}: a symbolic link to {target!r}")
+' "$tree"); then
+  if [ -n "$escaping" ]; then
+    while IFS= read -r f; do
+      say "$f, which leaves the staged tree: no check may read a file the index does not hold"
+    done <<< "$escaping"
+  fi
+else
+  say "could not read the symbolic links of the staged tree"
+  exit 1
+fi
+
+# 5. nothing confidential: every staged blob and its path but upstream's own blobs (public bytes that carry nothing of
+#    the family's), through the staged scan copy, refused unless it equals the wiki's master (a master change refuses
+#    every commit until the sync commit, whose staged copy equals it); policy fork with the two allow lists joined in a
+#    fork, policy library with the shared list in a family package
+if [ -n "$upc" ]; then
+  policy=fork allow=$tmp/allow.txt
+  awk 1 "$wiki/tools/split/confidential-allow.txt" "$wiki/tools/split/confidential-allow-fork.txt" > "$allow" || {
+    say "the wiki's two allow lists cannot be joined into one (above)"
+    exit 1
+  }
+else
+  policy=library allow=$wiki/tools/split/confidential-allow.txt
+fi
+staged_files=()
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  upstream_blob "$f" && continue
+  { mkdir -p "$scan/$(dirname "$f")" && git cat-file blob ":$f" > "$scan/$f"; } || say "$f: its staged blob cannot be read"
+  staged_files+=("$f")
+done <<< "$staged"
+master=$wiki/tools/split/confidential_scan.py
+if ! cmp -s "$tree/tools/checks/confidential_scan.py" "$master"; then
+  say "tools/checks/confidential_scan.py as staged differs from the wiki's master $master, or is missing: copy the master over it and stage it, the sync commit"
+elif [ "${#staged_files[@]}" -gt 0 ]; then
+  (cd "$scan" && python3 "$tree/tools/checks/confidential_scan.py" --policy "$policy" \
+    --words "$wiki/tools/split/confidential-words.txt" --allow "$allow" \
+    --identities "$wiki/tools/split/confidential-identities.txt" --refs "$wiki/tools/mirrors/refs.tsv" \
+    --files "${staged_files[@]}") >&2 ||
+    say "the confidential scan (policy $policy) refused the staged files (above): nothing confidential enters this public repository"
+fi
+
+# 6. Julia formatting of the family's scope: the staged .jl that upstream's tree does not hold (every staged .jl in a
+#    family package) against the staged .JuliaFormatter.toml with the pinned JuliaFormatter 2.14.10 of the working
+#    tree's format/, the julia on PATH called directly; a missing julia or environment or another version fails, never
+#    skips. One process over the materialised copies, absolute paths, so JuliaFormatter finds $tree's configuration
+# (a test, not a case statement: bash 3.2 misreads a case pattern's parenthesis inside a command substitution)
+jl_files=$(while IFS= read -r f; do
+  [[ $f == *.jl ]] && ! upstream_holds "$f" && printf '%s\n' "$f"
+done <<< "$staged")
+if [ -n "$jl_files" ]; then
+  jf() { JULIA_LOAD_PATH='@:@stdlib' julia --project="$root/format" --startup-file=no "$@"; }
+  v=$(jf -e 'using JuliaFormatter; print(pkgversion(JuliaFormatter))' 2> /dev/null) || v="" # a failing probe is unavailable
+  if ! git cat-file -e ":.JuliaFormatter.toml" 2> /dev/null; then
+    say "the family's Julia is staged but .JuliaFormatter.toml is not in the index"
+  elif [ "$v" != 2.14.10 ]; then
+    say "the family's Julia is staged and format/ loads JuliaFormatter '${v:-nothing}', not the pinned 2.14.10; run julia --project=format -e 'using Pkg; Pkg.instantiate()'"
+  else
+    jl_abs=()
+    while IFS= read -r f; do [ -n "$f" ] && jl_abs+=("$tree/$f"); done <<< "$jl_files"
+    unformatted=$(jf -e 'using JuliaFormatter
+      for f in ARGS
+          format(f; overwrite=false, throw_on_error=true) || println(f)
+      end' -- "${jl_abs[@]}" 2> "$tmp/.jf-error") || {
+      sed 's/^/  /' "$tmp/.jf-error" >&2
+      say "JuliaFormatter failed on the staged .jl (above); run 'just jl-format' on them and re-add"
+    }
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      say "${f#"$tree/"}: JuliaFormatter 2.14.10 differences in the staged version; run 'just jl-format $(printf '%q' "${f#"$tree/"}")' and re-add"
+    done <<< "$unformatted"
+  fi
+fi
+
+exit $fail

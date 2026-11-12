@@ -1,0 +1,13 @@
+DoubleFloatsX
+
+This package is a modified version of DoubleFloats.jl, Copyright (c) 2018-2023 Julia Math, released under the MIT
+License. LICENSE is upstream's licence, kept unchanged, and covers the whole package.
+
+Upstream: https://github.com/JuliaMath/DoubleFloats.jl, admitted at its release v1.12.0 (commit
+60b72cae8a53577c170afab0d48a011a853d1a96, tree 00720e467f998dc28d6bd3ec2fe33b1d04155f6c); UPSTREAM.toml records it with
+the patches carried on top of it. The repository carries upstream's history; upstream's tags are kept as upstream/<tag>.
+
+Modifications (each changed contract is a row of README.md, "Differences from upstream"):
+- 2026-11-12: upstream's GitHub workflows and Dependabot configuration removed (this repository runs no hosted CI);
+  the stray src/math/.DS_Store removed; the family's tooling added (AGENTS.md, NOTICE, UPSTREAM.toml, justfile,
+  .githooks/, tools/, format/, .JuliaFormatter.toml).
