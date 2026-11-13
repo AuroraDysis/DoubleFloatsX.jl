@@ -101,6 +101,13 @@ function cases(::Type{T}) where {T}
         end
     end
     push!(xs, DoubleFloat{T}(T(-3), -zero(T))) # an integer with a -0.0 low limb
+    # next to floatmax(T), where rounding in T overflows but a wide integer type holds the result
+    p2 = ldexp(one(T), p - 2)
+    for lo in (0.5, 1.5, 7.5, 8.5, 15.25, 15.5, 15.75, -0.5, -15.5, p2 + 0.5, -p2 - 0.5),
+        s in (1, -1)
+
+        push!(xs, dd(T, s * floatmax(T), lo), dd(T, s * prevfloat(floatmax(T)), lo))
+    end
     # random values, integers and fractions, of every magnitude a width can hold
     rng = Xoshiro(20261113)
     for _ in 1:200
@@ -117,6 +124,12 @@ function cases(::Type{T}) where {T}
 end
 
 canonical(x::DoubleFloat) = HI(x) + LO(x) == HI(x)
+
+# a rounded value equals the exact integer, or is the infinity of x's sign when T cannot hold that integer
+function rounds_to(y::DoubleFloat{T}, want, x) where {T}
+    isfinite(T(want)) || return HI(y) == copysign(T(Inf), HI(x))
+    return exact(y) == want && canonical(y) && isinteger(HI(y)) && isinteger(LO(y))
+end
 
 @testset "integer conversions $T" for T in (Float16, Float32, Float64)
     for x in cases(T)
@@ -149,8 +162,7 @@ end
         for r in MODES
             want = oracle(x, r)
             y = round(x, r)
-            @test exact(y) == want
-            @test canonical(y) && isinteger(HI(y)) && isinteger(LO(y))
+            @test rounds_to(y, want, x)
             @test signbit(y) == signbit(x) # a zero takes x's sign, as Base's
             for I in WIDTHS
                 exact_or_throws(() -> round(I, x, r), I, want)
@@ -160,7 +172,7 @@ end
             (floor, RoundDown), (ceil, RoundUp), (trunc, RoundToZero), (round, RoundNearest)
         )
             want = oracle(x, r)
-            @test exact(f(x)) == want
+            @test rounds_to(f(x), want, x)
             for I in WIDTHS
                 exact_or_throws(() -> f(I, x), I, want)
             end
@@ -175,6 +187,31 @@ end
 end
 
 # fixed cases: the boundary hi = 2^(n-1) with lo < 0, the last-limb ties, and the upstream defects
+@testset "next to floatmax, both signs, every mode" begin
+    for s in (1, -1), lo in (15.25, 15.5, 15.75)
+        x = s * DoubleFloat(floatmax(Float16), Float16(lo))
+        for r in MODES, I in (Int32, UInt16, UInt32)
+            exact_or_throws(() -> round(I, x, r), I, oracle(x, r))
+        end
+    end
+    x = DoubleFloat(floatmax(Float16), Float16(15.5)) # 65519.5
+    @test ceil(UInt16, x) === UInt16(65520)
+    @test round(Int32, x) === Int32(65520)
+    @test floor(Int32, -x) === Int32(-65520)
+    @test trunc(UInt16, x) === UInt16(65519)
+    @test round(UInt16, x, RoundNearestTiesUp) === UInt16(65520)
+    @test round(Int32, -x, RoundNearestTiesUp) === Int32(-65519)
+    @test ceil(x) == Inf16 && floor(-x) == -Inf16 # beyond Double16, as a float's overflow
+    for s in (1, -1), lo in (0.5f0, 1.5f0, -0.5f0)
+        y = s * DoubleFloat(floatmax(Float32), lo)
+        for r in MODES, I in (Int128, UInt128)
+            exact_or_throws(() -> round(I, y, r), I, oracle(y, r))
+        end
+    end
+    @test ceil(UInt128, DoubleFloat(floatmax(Float32), 0.5f0)) ===
+        UInt128(floatmax(Float32)) + 1
+end
+
 @testset "integer boundaries" begin
     @test Int64(DoubleFloat{Float64}(2.0^63, -1.0)) === typemax(Int64)
     @test Int64(DoubleFloat{Float64}(2.0^63, -1024.0)) === typemax(Int64) - 1023

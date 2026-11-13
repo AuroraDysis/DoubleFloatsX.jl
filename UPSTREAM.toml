@@ -26,7 +26,7 @@ summary = "the package renamed DoubleFloatsX with its own UUID and this reposito
 
 [[patch]]
 id = "DFX-002"
-summary = "conversion to Int8..Int128 and UInt8..UInt128 (constructor, convert, Integer, Signed, Unsigned) exact or InexactError, of the target type, computed on the limbs without allocating; round, floor, ceil and trunc to every fixed-width type through them"
+summary = "conversion to Int8..Int128 and UInt8..UInt128 (constructor, convert, Integer, Signed, Unsigned) exact or InexactError, of the target type, computed on the limbs without allocating; round, floor, ceil and trunc to every fixed-width type decided on the limbs, never rounded in the float type first"
 
 [[patch]]
 id = "DFX-003"

@@ -13,23 +13,16 @@ function trunc(x::DoubleFloat{T}) where {T<:IEEEFloat}
     signbit(x) ? ceil(x) : floor(x)
 end
 
-# to an integer type, every width: the value rounded here, then converted exactly (Base's own methods
-# differ between Julia versions and before 1.11 need a trunc of their own for each type)
-for f in (:floor, :ceil, :trunc, :round)
-    @eval $f(::Type{I}, x::DoubleFloat{T}) where {I<:Base.BitInteger, T<:IEEEFloat} = I($f(x))
-    @eval $f(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int($f(x))
-end
-round(::Type{I}, x::DoubleFloat{T}, r::RoundingMode) where {I<:Base.BitInteger, T<:IEEEFloat} = I(round(x, r))
-round(::Type{Integer}, x::DoubleFloat{T}, r::RoundingMode) where {T<:IEEEFloat} = Int(round(x, r))
-
-# For a finite non-integer x: x = n + f exactly with n = nh + nl an integer and 0 < |f| < 1 (f takes the low
-# limb's sign when the high limb is an integer); returns nh, nl, sign(f) and cmp(|f|, 1/2), decided on the limbs
-function intfrac(x::DoubleFloat{T}) where {T<:IEEEFloat}
+# For a finite non-integer x: x = t + f exactly with t = th + tl = trunc(x), which cannot overflow T
+# (|tl| <= 2^(precision(T)-1)), and 0 < |f| < 1 of x's sign; returns th, tl and cmp(|f|, 1/2), decided on the limbs
+function truncfrac(x::DoubleFloat{T}) where {T<:IEEEFloat}
     hi, lo = HILO(x)
     if isinteger(hi)
         t = trunc(lo)
-        d = lo - t # exact
-        return hi, t, sign(d), cmp(abs(d), T(0.5))
+        d = lo - t # exact, of lo's sign
+        c = cmp(abs(d), T(0.5))
+        signbit(d) == signbit(hi) && return hi, t, c
+        return hi, t + sign(d), -c # lo against hi's sign: trunc(x) is hi + t + sign(d), |f| is 1 - |d|
     end
     t = trunc(hi)
     d = hi - t # exact; |lo| <= ulp(hi)/2 carries hi + lo past no integer and no half-integer
@@ -37,16 +30,51 @@ function intfrac(x::DoubleFloat{T}) where {T<:IEEEFloat}
     if iszero(c) && !iszero(lo) # hi is a half-integer: lo breaks the tie
         c = signbit(lo) == signbit(d) ? 1 : -1
     end
-    return t, zero(T), sign(d), c
+    return t, zero(T), c
 end
 
-# The integer nearest x; at a tie, n + sign(f) when away(nh, nl, sign(f)), else n
-function nearest(x::DoubleFloat{T}, away::F) where {T<:IEEEFloat, F}
+# Whether rounding by the mode leaves trunc(x) for the next integer from zero, from c = cmp(|x - trunc(x)|, 1/2),
+# the parity of trunc(x) and the sign of x
+roundsaway(::RoundingMode{:ToZero}, c, odd, neg) = false
+roundsaway(::RoundingMode{:FromZero}, c, odd, neg) = true
+roundsaway(::RoundingMode{:Up}, c, odd, neg) = !neg
+roundsaway(::RoundingMode{:Down}, c, odd, neg) = neg
+roundsaway(::RoundingMode{:Nearest}, c, odd, neg) = c > 0 || (iszero(c) && odd) # a tie to even
+roundsaway(::RoundingMode{:NearestTiesAway}, c, odd, neg) = c >= 0
+roundsaway(::RoundingMode{:NearestTiesUp}, c, odd, neg) = c > 0 || (iszero(c) && !neg)
+
+isoddsum(th, tl) = xor(isodd(th), isodd(tl)) # the parity of th + tl, two integers
+
+# The integer nearest x, a tie decided by the mode
+function nearest(x::DoubleFloat{T}, r::RoundingMode) where {T<:IEEEFloat}
     (isinteger(x) || !isfinite(HI(x))) && return x
-    nh, nl, s, c = intfrac(x)
-    k = (c > 0 || (iszero(c) && away(nh, nl, s))) ? s : zero(T)
-    hi, lo = two_sum(nh, nl + k) # nl + k is exact: |nl| < 2^(precision(T)-1)
+    th, tl, c = truncfrac(x)
+    k = roundsaway(r, c, isoddsum(th, tl), signbit(HI(x))) ? copysign(one(T), HI(x)) : zero(T)
+    hi, lo = two_sum(th, tl + k) # tl + k is exact
     return DoubleFloat{T}(copysign(hi, HI(x)), lo) # a zero takes x's sign, as Base's
+end
+
+# To an integer type, every width, decided on the limbs: trunc(x) converted exactly, then one step from zero or
+# none. Rounding in T first would overflow T next to floatmax(T), where a wide integer type still holds the result.
+function round(::Type{I}, x::DoubleFloat{T}, r::RoundingMode) where {I<:Base.BitInteger, T<:IEEEFloat}
+    (isinteger(x) || !isfinite(HI(x))) && return I(x)
+    th, tl, c = truncfrac(x)
+    neg = signbit(HI(x))
+    n = I(DoubleFloat(th, tl)) # when trunc(x) is beyond I, so is the result, n or one further from zero
+    roundsaway(r, c, isoddsum(th, tl), neg) || return n
+    m, overflow = neg ? Base.Checked.sub_with_overflow(n, one(I)) : Base.Checked.add_with_overflow(n, one(I))
+    overflow && throw(InexactError(nameof(I), I, x))
+    return m
+end
+for (J, K) in ((:Integer, :Int), (:Signed, :Int), (:Unsigned, :UInt))
+    @eval round(::Type{$J}, x::DoubleFloat{T}, r::RoundingMode) where {T<:IEEEFloat} = round($K, x, r)
+end
+# Base's own methods differ between Julia versions, and before 1.11 need a trunc for each type
+for (f, r) in ((:floor, :RoundDown), (:ceil, :RoundUp), (:trunc, :RoundToZero), (:round, :RoundNearest))
+    @eval $f(::Type{I}, x::DoubleFloat{T}) where {I<:Base.BitInteger, T<:IEEEFloat} = round(I, x, $r)
+    for J in (:Integer, :Signed, :Unsigned)
+        @eval $f(::Type{$J}, x::DoubleFloat{T}) where {T<:IEEEFloat} = round($J, x, $r)
+    end
 end
 
 round(x::DoubleFloat{T}) where {T<:IEEEFloat} = round(x, RoundNearest)
@@ -67,18 +95,9 @@ function round(x::DoubleFloat{T}, ::RoundingMode{:FromZero}) where {T<:IEEEFloat
     return isnegative(x) ? floor(x) : ceil(x)
 end
 
-# a tie to the even integer, the parity of nh + nl (nh is even when nl is not zero)
-function round(x::DoubleFloat{T}, ::RoundingMode{:Nearest}) where {T<:IEEEFloat}
-    return nearest(x, (nh, nl, s) -> xor(isodd(nh), isodd(nl)))
-end
-
-function round(x::DoubleFloat{T}, ::RoundingMode{:NearestTiesAway}) where {T<:IEEEFloat}
-    return nearest(x, (nh, nl, s) -> signbit(s) == signbit(x)) # n + s is the farther from zero
-end
-
-function round(x::DoubleFloat{T}, ::RoundingMode{:NearestTiesUp}) where {T<:IEEEFloat}
-    return nearest(x, (nh, nl, s) -> s > 0)
-end
+round(x::DoubleFloat{T}, r::RoundingMode{:Nearest}) where {T<:IEEEFloat} = nearest(x, r)
+round(x::DoubleFloat{T}, r::RoundingMode{:NearestTiesAway}) where {T<:IEEEFloat} = nearest(x, r)
+round(x::DoubleFloat{T}, r::RoundingMode{:NearestTiesUp}) where {T<:IEEEFloat} = nearest(x, r)
 
 """
      spread(x)
