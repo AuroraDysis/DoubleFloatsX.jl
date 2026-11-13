@@ -57,6 +57,7 @@ include("compare.jl")
 include("promote.jl")
 
 include("prearith.jl")
+include("integers.jl")
 include("arithmetic.jl")
 include("fma.jl")
 include("modrem.jl")

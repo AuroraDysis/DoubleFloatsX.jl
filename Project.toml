@@ -4,7 +4,7 @@ keywords = ["math", "floating-point", "doubledouble", "extended-precision", "acc
 license = "MIT"
 desc = "extended precision floating point types using value pairs"
 repo = "https://github.com/AuroraDysis/DoubleFloatsX.jl.git"
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"

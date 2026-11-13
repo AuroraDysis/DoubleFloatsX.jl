@@ -23,3 +23,15 @@ uuid = "949356e3-18ca-4f00-99f2-e8b6fcaa5048"
 [[patch]]
 id = "DFX-001"
 summary = "the package renamed DoubleFloatsX with its own UUID and this repository as its repo; its module and qualifications renamed; the exported type names upstream's"
+
+[[patch]]
+id = "DFX-002"
+summary = "conversion to Int8..Int128 and UInt8..UInt128 (constructor, convert, Integer, Signed, Unsigned) exact or InexactError, of the target type, computed on the limbs without allocating; round, floor, ceil and trunc to every fixed-width type through them"
+
+[[patch]]
+id = "DFX-003"
+summary = "floor, ceil and trunc exact: an integer's zero low limb no longer counted as fractional, a fractional low limb added to the high limb exactly; the Double64 and Double32 floatmin2 constants recomputed with them"
+
+[[patch]]
+id = "DFX-004"
+summary = "round and RoundNearest tie to even, RoundNearestTiesAway and RoundNearestTiesUp exact, each decided on the limbs"

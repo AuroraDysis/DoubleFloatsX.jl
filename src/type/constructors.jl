@@ -6,11 +6,25 @@
 @inline Base.Float32(x::DoubleFloat{T}) where {T<:IEEEFloat} = Float32(Float64(x))
 @inline Base.Float16(x::DoubleFloat{T}) where {T<:IEEEFloat} = Float16(Float64(x))
 
-Base.Int128(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int128(round(BigInt, BigFloat(HI(x)) + BigFloat(LO(x))))
-Base.Int64(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int64(round(BigInt, BigFloat(HI(x)) + BigFloat(LO(x))))
-Base.Int32(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int32(round(BigInt, BigFloat(HI(x)) + BigFloat(LO(x))))
-Base.Int16(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int16(round(BigInt, BigFloat(HI(x)) + BigFloat(LO(x))))
-Base.Int8(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int8(round(BigInt, BigFloat(HI(x)) + BigFloat(LO(x))))
+# Exact, or InexactError, as Base's for an IEEEFloat; computed on the limbs, which are integers when the
+# value is (hi is fl(x), so lo = x - hi is an integer once hi is one)
+function (::Type{I})(x::DoubleFloat{T}) where {I<:Base.BitInteger, T<:IEEEFloat}
+    hi, lo = HILO(x)
+    (isinteger(hi) && isinteger(lo)) || throw(InexactError(nameof(I), I, x))
+    # hi = typemax(I) + 1, beyond I, is in range when lo < 0
+    if Float64(hi) == ldexp(1.0, 8 * sizeof(I) - (I <: Signed))
+        lo < 0 || throw(InexactError(nameof(I), I, x))
+        return typemax(I) - (I(-lo) - one(I))
+    end
+    n = I(hi) # InexactError for any other hi out of range, and then x is out of range too
+    r, overflow = signbit(lo) ? Base.Checked.sub_with_overflow(n, I(-lo)) : Base.Checked.add_with_overflow(n, I(lo))
+    overflow && throw(InexactError(nameof(I), I, x))
+    return r
+end
+
+Base.Integer(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(x)
+Base.Signed(x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(x)
+Base.Unsigned(x::DoubleFloat{T}) where {T<:IEEEFloat} = UInt(x)
 
 @inline Base.BigFloat(x::DoubleFloat{T}) where {T<:IEEEFloat} = BigFloat(HI(x)) + BigFloat(LO(x))
 @inline Base.BigInt(x::DoubleFloat{T}) where {T<:IEEEFloat} = BigInt(BigFloat(x))

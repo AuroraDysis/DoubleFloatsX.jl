@@ -14,3 +14,9 @@ Modifications (each changed contract is a row of README.md, "Differences from up
 - 2026-11-12: the package renamed DoubleFloatsX with its own UUID and version 0.1.0-DEV, Project.toml's repo naming
   this repository; its module and every qualification by the old name in code renamed; the exported type names
   unchanged (DFX-001).
+- 2026-11-13: conversion to every fixed-width integer type exact, of the target type and allocation-free, with
+  Integer, Signed and Unsigned added, upstream's integer convert removed for Base's, and round, floor, ceil and trunc
+  to an integer type defined for every width (DFX-002); floor, ceil and trunc exact (DFX-003); round's ties to even and the nearest modes
+  decided on the limbs (DFX-004); in src/type/constructors.jl, src/type/convert.jl,
+  src/math/prearith/floorceiltrunc.jl and src/extras/misc.jl (the floatmin2 constants, recomputed with the exact
+  trunc), with test/integers.jl added to the tests; version 0.2.0.

@@ -1,70 +1,55 @@
 function floor(x::DoubleFloat{T}) where {T<:IEEEFloat}
-    # !isinteger(LO(x)), LO(x) is mixed or fractional
-    if isinteger(HI(x))
-        if isfractional(LO(x))
-            if signbit(LO(x))
-                DoubleFloat{T}(HI(x)-one(T), zero(T))
-            else
-                DoubleFloat{T}(HI(x), zero(T))
-            end
-        else # LO(x) is mixed: +/- int.frac
-            DoubleFloat(HI(x), floor(LO(x)))
-        end
+    isinteger(x) && return x
+    if isinteger(HI(x)) # LO(x) is mixed or fractional: hi + floor(lo), renormalized
+        DoubleFloat(HI(x), floor(LO(x)))
     else # HI(x) is mixed or fractional
         DoubleFloat{T}(floor(HI(x)), zero(T))
     end
 end
 
-floor(::Type{Int128}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int128(floor(x))
-floor(::Type{Int64}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int64(floor(x))
-floor(::Type{Int32}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int32(floor(x))
-floor(::Type{Int16}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int16(floor(x))
-floor(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(floor(x))
-
-function ceil(x::DoubleFloat{T}) where {T<:IEEEFloat}
-    # !isinteger(LO(x)), LO(x) is mixed or fractional
-    if isinteger(HI(x))
-        if isfractional(LO(x))
-            if signbit(LO(x))
-                DoubleFloat{T}(HI(x), zero(T))
-            else
-                DoubleFloat{T}(HI(x)+one(T), zero(T))
-            end
-        else # LO(x) is mixed: +/- int.frac
-            DoubleFloat(HI(x), ceil(LO(x)))
-        end
-    else # HI(x) is mixed or fractional
-        DoubleFloat{T}(ceil(HI(x)), zero(T))
-    end
-end
-
-ceil(::Type{Int128}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int128(ceil(x))
-ceil(::Type{Int64}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int64(ceil(x))
-ceil(::Type{Int32}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int32(ceil(x))
-ceil(::Type{Int16}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int16(ceil(x))
-ceil(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(ceil(x))
+ceil(x::DoubleFloat{T}) where {T<:IEEEFloat} = -floor(-x)
 
 function trunc(x::DoubleFloat{T}) where {T<:IEEEFloat}
     signbit(x) ? ceil(x) : floor(x)
 end
 
-trunc(::Type{Int128}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int128(trunc(x))
-trunc(::Type{Int64}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int64(trunc(x))
-trunc(::Type{Int32}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int32(trunc(x))
-trunc(::Type{Int16}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int16(trunc(x))
-trunc(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(trunc(x))
+# to an integer type, every width: the value rounded here, then converted exactly (Base's own methods
+# differ between Julia versions and before 1.11 need a trunc of their own for each type)
+for f in (:floor, :ceil, :trunc, :round)
+    @eval $f(::Type{I}, x::DoubleFloat{T}) where {I<:Base.BitInteger, T<:IEEEFloat} = I($f(x))
+    @eval $f(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int($f(x))
+end
+round(::Type{I}, x::DoubleFloat{T}, r::RoundingMode) where {I<:Base.BitInteger, T<:IEEEFloat} = I(round(x, r))
+round(::Type{Integer}, x::DoubleFloat{T}, r::RoundingMode) where {T<:IEEEFloat} = Int(round(x, r))
 
-
-function round(x::DoubleFloat{T}) where {T<:IEEEFloat}
-    trunc(x + copysign(0.5, x))
+# For a finite non-integer x: x = n + f exactly with n = nh + nl an integer and 0 < |f| < 1 (f takes the low
+# limb's sign when the high limb is an integer); returns nh, nl, sign(f) and cmp(|f|, 1/2), decided on the limbs
+function intfrac(x::DoubleFloat{T}) where {T<:IEEEFloat}
+    hi, lo = HILO(x)
+    if isinteger(hi)
+        t = trunc(lo)
+        d = lo - t # exact
+        return hi, t, sign(d), cmp(abs(d), T(0.5))
+    end
+    t = trunc(hi)
+    d = hi - t # exact; |lo| <= ulp(hi)/2 carries hi + lo past no integer and no half-integer
+    c = cmp(abs(d), T(0.5))
+    if iszero(c) && !iszero(lo) # hi is a half-integer: lo breaks the tie
+        c = signbit(lo) == signbit(d) ? 1 : -1
+    end
+    return t, zero(T), sign(d), c
 end
 
-round(::Type{Int128}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int128(round(x))
-round(::Type{Int64}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int64(round(x))
-round(::Type{Int32}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int32(round(x))
-round(::Type{Int16}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int16(round(x))
-round(::Type{Integer}, x::DoubleFloat{T}) where {T<:IEEEFloat} = Int(round(x))
+# The integer nearest x; at a tie, n + sign(f) when away(nh, nl, sign(f)), else n
+function nearest(x::DoubleFloat{T}, away::F) where {T<:IEEEFloat, F}
+    (isinteger(x) || !isfinite(HI(x))) && return x
+    nh, nl, s, c = intfrac(x)
+    k = (c > 0 || (iszero(c) && away(nh, nl, s))) ? s : zero(T)
+    hi, lo = two_sum(nh, nl + k) # nl + k is exact: |nl| < 2^(precision(T)-1)
+    return DoubleFloat{T}(copysign(hi, HI(x)), lo) # a zero takes x's sign, as Base's
+end
 
+round(x::DoubleFloat{T}) where {T<:IEEEFloat} = round(x, RoundNearest)
 
 function round(x::DoubleFloat{T}, ::RoundingMode{:Up}) where {T<:IEEEFloat}
     return ceil(x)
@@ -82,22 +67,17 @@ function round(x::DoubleFloat{T}, ::RoundingMode{:FromZero}) where {T<:IEEEFloat
     return isnegative(x) ? floor(x) : ceil(x)
 end
 
+# a tie to the even integer, the parity of nh + nl (nh is even when nl is not zero)
 function round(x::DoubleFloat{T}, ::RoundingMode{:Nearest}) where {T<:IEEEFloat}
-    isnegative(x) && return -round(-x, RoundNearest)
-    a = trunc(x + 0.5)
-    return iseven(a) ? a : trunc(x - 0.5)
+    return nearest(x, (nh, nl, s) -> xor(isodd(nh), isodd(nl)))
 end
 
 function round(x::DoubleFloat{T}, ::RoundingMode{:NearestTiesAway}) where {T<:IEEEFloat}
-    isnegative(x) && return -round(-x, RoundNearestTiesAway)
-    !isinteger(x - 0.5) && return round(x, RoundNearest)
-    return round(x + 0.5, RoundNearest)
+    return nearest(x, (nh, nl, s) -> signbit(s) == signbit(x)) # n + s is the farther from zero
 end
 
 function round(x::DoubleFloat{T}, ::RoundingMode{:NearestTiesUp}) where {T<:IEEEFloat}
-    isnegative(x) && return -round(-x, RoundNearestTiesUp)
-    !isinteger(x - 0.5) && return round(x, RoundUp)
-    return round(x + 0.5, RoundNearest)
+    return nearest(x, (nh, nl, s) -> s > 0)
 end
 
 """
