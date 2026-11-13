@@ -35,8 +35,8 @@ work and report the conflict.
   `src/DoubleFloats.jl`). They keep upstream's formatting and checks: the guard's size, binary and debris checks skip
   a blob equal to upstream's at the same path, and the confidential scan reads every changed one whole.
 - **The family's scope**: every other tracked path, computed, never hand-listed: `just scope` (`tools/family-scope.sh`;
-  the guard computes the same over the staged paths). Its Julia is formatted by JuliaFormatter 2.14.10 with the blue
-  style of `.JuliaFormatter.toml`, pinned in `format/`.
+  the guard computes the same over the staged paths). Its Julia is formatted by JuliaFormatter, at its newest release
+  pinned in `format/`'s manifest, with the blue style of `.JuliaFormatter.toml`.
 
 ## Repository-wide constraints
 

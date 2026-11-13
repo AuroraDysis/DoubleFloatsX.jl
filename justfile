@@ -41,7 +41,7 @@ release-test:
 scope:
     @bash tools/family-scope.sh
 
-# Format the family's Julia files in place with the pinned JuliaFormatter 2.14.10 of format/ and the style of .JuliaFormatter.toml, the paths defaulting to the family's scope; upstream's files are never formatted
+# Format the family's Julia files in place with the JuliaFormatter pinned in format/'s manifest and the style of .JuliaFormatter.toml, the paths defaulting to the family's scope; upstream's files are never formatted
 [positional-arguments]
 jl-format *PATHS:
     #!/usr/bin/env bash
@@ -50,7 +50,7 @@ jl-format *PATHS:
     [ $# = 0 ] && { echo "jl-format: no Julia file in the family's scope"; exit 0; }
     JULIA_LOAD_PATH='@:@stdlib' julia --project=format --startup-file=no -e 'using JuliaFormatter; format(ARGS; throw_on_error=true)' -- "$@"
 
-# Check that JuliaFormatter 2.14.10 would change no .jl file of the family's scope (or the paths named): exit 1 naming the files, or on a missing environment or another formatter version
+# Check that the JuliaFormatter pinned in format/'s manifest would change no .jl file of the family's scope (or the paths named): exit 1 naming the files, or on a missing environment or a loaded version other than the manifest's
 [positional-arguments]
 jl-fmt-check *PATHS:
     #!/usr/bin/env bash
@@ -58,10 +58,11 @@ jl-fmt-check *PATHS:
     if [ $# = 0 ]; then set -- $(bash tools/family-scope.sh | grep '\.jl$' || true); fi
     [ $# = 0 ] && { echo "jl-fmt-check: no Julia file in the family's scope"; exit 0; }
     JULIA_LOAD_PATH='@:@stdlib' julia --project=format --startup-file=no -e '
-        using JuliaFormatter
-        pkgversion(JuliaFormatter) == v"2.14.10" || (println(stderr, "jl-fmt-check: JuliaFormatter ", pkgversion(JuliaFormatter), " loaded; format/ pins 2.14.10"); exit(1))
+        using JuliaFormatter, TOML
+        pin = VersionNumber(only(TOML.parsefile("format/Manifest.toml")["deps"]["JuliaFormatter"])["version"])
+        pkgversion(JuliaFormatter) == pin || (println(stderr, "jl-fmt-check: JuliaFormatter ", pkgversion(JuliaFormatter), " loaded; format/Manifest.toml records ", pin); exit(1))
         bad = filter(f -> !format(f; overwrite=false, throw_on_error=true), ARGS)
-        isempty(bad) || (println(stderr, "jl-fmt-check: JuliaFormatter 2.14.10 would change: ", join(bad, ", ")); exit(1))
+        isempty(bad) || (println(stderr, "jl-fmt-check: JuliaFormatter ", pin, " would change: ", join(bad, ", ")); exit(1))
         println("jl-fmt-check: ", length(ARGS), " files formatted")' -- "$@"
 
 # The package's own tests (upstream's suite), one Julia process

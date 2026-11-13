@@ -95,7 +95,7 @@ put src/UpX.jl "$(printf 'module UpX\nf(x)=x+2\nend')"
 guard "fork: an upstream file changed in upstream's style passes the formatter" 0
 reset
 put tools/x.jl "f(x)=x+1"
-guard "fork: the family's unformatted Julia is refused" 1 "JuliaFormatter 2.14.10 differences"
+guard "fork: the family's unformatted Julia is refused" 1 "differences in the staged version"
 reset
 put tools/contact.txt "$mail"
 guard "fork: an address in a family file is refused" 1 "the confidential scan (policy fork)"
@@ -159,7 +159,7 @@ tooling || exit 2
 guard "family: the tooling alone passes" 0
 g commit -qm "family: the tooling" || exit 2
 put src/x.jl "f(x)=x+1"
-guard "family: unformatted Julia anywhere is refused" 1 "JuliaFormatter 2.14.10 differences"
+guard "family: unformatted Julia anywhere is refused" 1 "differences in the staged version"
 reset
 put src/x.jl "$(printf 'f(x) = x + 1')"
 guard "family: formatted Julia passes" 0

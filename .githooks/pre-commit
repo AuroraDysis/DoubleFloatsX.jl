@@ -225,9 +225,10 @@ elif [ "${#staged_files[@]}" -gt 0 ]; then
 fi
 
 # 6. Julia formatting of the family's scope: the staged .jl that upstream's tree does not hold (every staged .jl in a
-#    family package) against the staged .JuliaFormatter.toml with the pinned JuliaFormatter 2.14.10 of the working
-#    tree's format/, the julia on PATH called directly; a missing julia or environment or another version fails, never
-#    skips. One process over the materialised copies, absolute paths, so JuliaFormatter finds $tree's configuration
+#    family package) against the staged .JuliaFormatter.toml with the JuliaFormatter the working tree's
+#    format/Manifest.toml pins, the julia on PATH called directly; a missing julia or environment or another version
+#    fails, never skips. One process over the materialised copies, absolute paths, so JuliaFormatter finds $tree's
+#    configuration
 # (a test, not a case statement: bash 3.2 misreads a case pattern's parenthesis inside a command substitution)
 jl_files=$(while IFS= read -r f; do
   [[ $f == *.jl ]] && ! upstream_holds "$f" && printf '%s\n' "$f"
@@ -235,10 +236,11 @@ done <<< "$staged")
 if [ -n "$jl_files" ]; then
   jf() { JULIA_LOAD_PATH='@:@stdlib' julia --project="$root/format" --startup-file=no "$@"; }
   v=$(jf -e 'using JuliaFormatter; print(pkgversion(JuliaFormatter))' 2> /dev/null) || v="" # a failing probe is unavailable
+  pin=$(sed -n '/^\[\[deps\.JuliaFormatter\]\]$/,/^$/s/^version = "\(.*\)"$/\1/p' "$root/format/Manifest.toml" 2> /dev/null) || pin=""
   if ! git cat-file -e ":.JuliaFormatter.toml" 2> /dev/null; then
     say "the family's Julia is staged but .JuliaFormatter.toml is not in the index"
-  elif [ "$v" != 2.14.10 ]; then
-    say "the family's Julia is staged and format/ loads JuliaFormatter '${v:-nothing}', not the pinned 2.14.10; run julia --project=format -e 'using Pkg; Pkg.instantiate()'"
+  elif [ -z "$pin" ] || [ "$v" != "$pin" ]; then
+    say "the family's Julia is staged and format/ loads JuliaFormatter '${v:-nothing}', not the '${pin:-nothing}' format/Manifest.toml pins; run julia --project=format -e 'using Pkg; Pkg.instantiate()'"
   else
     jl_abs=()
     while IFS= read -r f; do [ -n "$f" ] && jl_abs+=("$tree/$f"); done <<< "$jl_files"
@@ -251,7 +253,7 @@ if [ -n "$jl_files" ]; then
     }
     while IFS= read -r f; do
       [ -n "$f" ] || continue
-      say "${f#"$tree/"}: JuliaFormatter 2.14.10 differences in the staged version; run 'just jl-format $(printf '%q' "${f#"$tree/"}")' and re-add"
+      say "${f#"$tree/"}: JuliaFormatter $pin differences in the staged version; run 'just jl-format $(printf '%q' "${f#"$tree/"}")' and re-add"
     done <<< "$unformatted"
   fi
 fi
