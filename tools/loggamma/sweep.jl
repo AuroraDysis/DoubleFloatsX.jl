@@ -45,6 +45,9 @@ function main(n)
         ("strip", () -> Complex(dd(unif(0.5, 16)), dd(unif(0, 4)))),
         ("upward 4 <= y < 5", () -> Complex(dd(unif(0.5, 16)), dd(unif(4, 5)))),
         ("upward 5 <= y < 16", () -> Complex(dd(unif(0.5, 16)), dd(unif(5, 16)))),
+        # the corner where the shared 1/ζ weighs most, sum_j |j/(ζ - j)| up to 22, and its reflection
+        ("upward corner", () -> Complex(dd(unif(0.5, 2)), dd(unif(4, 4.3)))),
+        ("reflected corner", () -> Complex(dd(unif(-1, 0.5)), dd(unif(4, 4.3)))),
         (
             "reflection pi|y| in [0.5, 4]",
             () -> Complex(dd(unif(-16, 0.5)), dd(unif(0.5, 4) / π)),

@@ -115,7 +115,7 @@ end
 end
 
 # the principal log; |w| by hypot, since the type's complex log squares the parts and overflows past 2^512
-_log(w::Complex) = Complex(log(abs(w)), atan(imag(w), real(w)))
+_log(w::Complex) = Complex(_logr(abs(w)), atan(imag(w), real(w)))
 
 # Stirling's series: (z - 1/2) log z - z + log(2π)/2 + sum_k B_2k / (2k (2k - 1) z^(2k - 1)), Horner in 1/z^2
 function _loggamma_stirling(z::Complex{T}, C::LogGammaConstants{T}) where {T}
@@ -150,9 +150,9 @@ end
 function _log_sinpi(x::T, y::T, C::LogGammaConstants{T}) where {T}
     if isinteger(2x)  # sin(πx) is ±0 or ±1 exactly, cos(πx) ±1 or 0, as Base's sinpi takes them
         if isinteger(x)  # y > 0 here: sin(πz) = ±i sinh(πy)
-            return Complex(log(_sinh(C.pi * y)), isodd(x) ? -C.halfpi : C.halfpi)
+            return Complex(_logr(_sinh(C.pi * y)), isodd(x) ? -C.halfpi : C.halfpi)
         end
-        return Complex(log(_cosh(C.pi * y)), isinteger((2x - 1) / 4) ? zero(T) : C.pi)
+        return Complex(_logr(_cosh(C.pi * y)), isinteger((2x - 1) / 4) ? zero(T) : C.pi)
     end
     n = round(x)
     s, c = sinpi(x - n), cospi(x - n)  # x - n is exact
@@ -160,16 +160,19 @@ function _log_sinpi(x::T, y::T, C::LogGammaConstants{T}) where {T}
         s, c = -s, -c
     end
     if iszero(y)  # sin(π(x + i0)) = sin(πx) + i0 cos(πx): the sign of cos(πx) chooses the side of a negative sine
-        return Complex(log(abs(s)), signbit(s) ? (signbit(c) ? -C.pi : C.pi) : zero(T))
+        return Complex(_logr(abs(s)), signbit(s) ? (signbit(c) ? -C.pi : C.pi) : zero(T))
     end
     py = C.pi * y
     return _log(Complex(s * _cosh(py), c * _sinh(py)))
 end
 
-# sinh and cosh for log sin(πz), whose error enters lg with weight one: Double64's own err by up to 26 units of 2^-106
-# relative, so they go through Float128 (113 bits) as Double64's sinpi and cospi do
+# the real log, sinh and cosh, each of whose errors enters lg with weight one, scaled by |log| for the log: Double64's
+# own log errs by 2.9 units of 2^-106 of its result and its sinh and cosh by up to 26 relative, so they go through
+# Float128 (113 bits), as Double64's sinpi and cospi do; another type supplies its own
+_logr(x) = log(x)
 _sinh(x) = sinh(x)
 _cosh(x) = cosh(x)
+_logr(x::Double64) = Double64(log(Float128(x)))
 _sinh(x::Double64) = Double64(sinh(Float128(x)))
 _cosh(x::Double64) = Double64(cosh(Float128(x)))
 
@@ -229,7 +232,7 @@ end
 
 # 106 bits: (w, N) = (16, 21), the cheapest w whose N meets Hare's bound 4 sqrt(πN) |T_N(w)| <= 2^-108; K = 35 Taylor
 # terms meet 2^-108 relative in the diamonds of radius 1/10; ystrip = 4, the largest the strip's branch allows, where
-# the rearranged upward shift above it errs by at most 13.2 u (it erred by 31 u at y = 4 before the rearrangement);
+# the rearranged upward shift above it errs by at most 14.5 u (it erred by 31 u at y = 4 before the rearrangement);
 # KR = 83, past which every term |c_j| |t|^j is below 2^-112 on |t| <= sqrt(1/4 + 4^2)
 const _LOGGAMMA_DOUBLE64 = LogGammaConstants{Double64}(16, 21, 35, 4, 83)
 

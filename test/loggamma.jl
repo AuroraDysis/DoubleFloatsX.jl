@@ -10,10 +10,11 @@ const SF = SpecialFunctions
 # special values and the allocation. Errors are in u = 2^-106: per component, of max(1, |lg|); in the Taylor diamonds
 # at 1 and 2, normwise relative to |lg|.
 
-# The bound per region, in u. Basis: the largest error over 900000 points against Arb, 100000 per band of
-# tools/loggamma/sweep.jl (2026-11-14): Stirling 5.35, strip 6.43, upward shift 13.22, reflection 7.58; relative in
-# the diamonds 3.60 at 1 and 3.26 at 2.
-const LG_BOUND = (stirling=8, taylor1=5, taylor2=5, reflection=16, strip=8, upward=16)
+# The bound per region, in u. Basis: the largest error against Arb (2026-11-14), over 1100000 points of
+# tools/loggamma/sweep.jl (100000 per band) and 1000000 more in each corner band, where the upward shift meets the strip
+# at Im z = 4: Stirling 4.74, strip 6.36, upward shift 14.52, reflection 15.33; relative in the diamonds 4.00 at 1 and
+# 4.03 at 2.
+const LG_BOUND = (stirling=8, taylor1=5, taylor2=5, reflection=24, strip=8, upward=24)
 
 # the kernel's region of z, by its own tests in its own order
 function lg_region(z::Complex{Double64})
@@ -141,9 +142,9 @@ end
 
         @testset "2F1 through Gamma.jl against Arb's 2F1" begin
             # an MST-type 2F1 at three arguments, x = -5.8, -68.8, -1000 (tools/loggamma/fixture.jl); its
-            # transformations call Gamma.gamma on Complex{Double64}. Bound: the measured relative errors, 8.8, 8.4 and
-            # 51.4 u (2026-11-14), rounded up to a power of two; with exact gamma values (through BigFloat) 2F1's own
-            # errors are 0.5, 3.4 and 41.0 u
+            # transformations call Gamma.gamma on Complex{Double64}. Bound: the measured relative errors, 1.1, 2.3 and
+            # 45.0 u (2026-11-14), rounded up to a power of two; with exact gamma values (through BigFloat) 2F1's own
+            # errors are 0.5, 3.4 and 41.0 u, so the third bound's margin is HypergeometricFunctions' rather than ours
             @test length(hyp) == 3
             for ((a, b, c, x, ref, (rre, rim)), bound) in zip(hyp, (16, 16, 64))
                 v = HypergeometricFunctions._₂F₁(a, b, c, x)
