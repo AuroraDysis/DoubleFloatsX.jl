@@ -20,3 +20,8 @@ Modifications (each changed contract is a row of README.md, "Differences from up
   decided on the limbs (DFX-004); in src/type/constructors.jl, src/type/convert.jl,
   src/math/prearith/floorceiltrunc.jl and src/extras/misc.jl (the floatmin2 constants, recomputed with the exact
   trunc), with test/integers.jl added to the tests; version 0.2.0.
+- 2026-11-14: loggamma of a Complex{Double64} added to SpecialFunctions' function, and, in the package extension
+  DoubleFloatsXGammaExt over the weak dependency Gamma, to Gamma.jl's with Gamma.gamma, Gamma.loggamma and
+  Gamma.logabsgamma of a Double64 (DFX-005); in src/math/special/loggamma.jl, ext/DoubleFloatsXGammaExt.jl and
+  src/DoubleFloatsX.jl, with test/loggamma.jl, its Arb fixture test/fixtures/loggamma_arb.tsv and the tools that
+  write and qualify it, tools/loggamma/; Gamma and HypergeometricFunctions added to the test targets.

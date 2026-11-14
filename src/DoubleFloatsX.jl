@@ -136,6 +136,9 @@ import SpecialFunctions: erf, erfc, gamma, logabsgamma,
     ellipk
 include("math/special/specialfunctions.jl")
 
+import SpecialFunctions
+include("math/special/loggamma.jl")
+
 end # module DoubleFloatsX
 
 

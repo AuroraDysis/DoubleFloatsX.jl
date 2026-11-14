@@ -15,15 +15,25 @@ Quadmath = "be4d8f0f-7fa4-5f49-b795-2f01399ab2dd"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
+[weakdeps]
+Gamma = "a0844989-3bd2-4988-8bea-c9407ab0941b"
+
+[extensions]
+DoubleFloatsXGammaExt = "Gamma"
+
 [compat]
+Gamma = "1.2"
 GenericLinearAlgebra = "0.3 - 0.6"
 GenericSchur = "0.5 - 0.7"
+HypergeometricFunctions = "0.3"
 Quadmath = "1"
 SpecialFunctions = "1 - 2"
 julia = "1.10"
 
 [extras]
+Gamma = "a0844989-3bd2-4988-8bea-c9407ab0941b"
+HypergeometricFunctions = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Gamma", "HypergeometricFunctions", "Test"]

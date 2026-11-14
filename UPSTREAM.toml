@@ -35,3 +35,7 @@ summary = "floor, ceil and trunc exact: an integer's zero low limb no longer cou
 [[patch]]
 id = "DFX-004"
 summary = "round and RoundNearest tie to even, RoundNearestTiesAway and RoundNearestTiesUp exact, each decided on the limbs"
+
+[[patch]]
+id = "DFX-005"
+summary = "loggamma(::Complex{Double64}) on the continuous branch, allocation-free, within 16 units of 2^-106 of max(1, |lg|) per part against Arb, in SpecialFunctions and, through the Gamma extension, Gamma.jl; Gamma.gamma, Gamma.loggamma and Gamma.logabsgamma of a Double64"
