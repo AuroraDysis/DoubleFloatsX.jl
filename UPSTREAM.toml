@@ -42,4 +42,4 @@ summary = "loggamma(::Complex{Double64}) on the continuous branch, allocation-fr
 
 [[patch]]
 id = "DFX-006"
-summary = "TaylorIntegration integrates with Double64 time: the extension DoubleFloatsXTaylorIntegrationExt gives its internal _exact_step a Double64 method, the clamp to tmax it uses for exact types"
+summary = "TaylorIntegration integrates with Double64 time: the extension DoubleFloatsXTaylorIntegrationExt gives its internal _exact_step a Double64 method that keeps its callers' contract: a nonzero step moves the time, none passes tmax, the one reaching tmax lands on it"
