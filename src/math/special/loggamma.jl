@@ -119,11 +119,14 @@ end
 # the principal log; |w| by hypot, since the type's complex log squares the parts and overflows past 2^512
 _log(w::Complex) = Complex(_logr(abs(w)), atan(imag(w), real(w)))
 
-# Stirling's series: (z - 1/2) log z - z + log(2π)/2 + sum_k B_2k / (2k (2k - 1) z^(2k - 1)), Horner in 1/z^2
+# Stirling's series: (z - 1/2) log z - z + log(2π)/2 + sum_k B_2k / (2k (2k - 1) z^(2k - 1)), Horner in 1/z^2,
+# its leading terms as (z - 1/2)(log z - 1) - 1/2, so that no term exceeds lg itself: (z - 1/2) log z alone overflows
+# at z = 2.559e305, where lg = 1.797e308 is finite. The product's partial products stay within |z| |log z - 1|, which
+# is |lg| to first order
 function _loggamma_stirling(z::Complex{T}, C::LogGammaConstants{T}) where {T}
     a = abs(z)
     zinv = conj(z / a) / a  # the type's inv(z) squares the parts and returns NaN past 2^511
-    return (z - T(0.5)) * _log(z) - z +
+    return (z - T(0.5)) * (_log(z) - 1) - T(0.5) +
            C.halflog2pi +
            zinv * _horner(C.stirling, zinv * zinv)
 end

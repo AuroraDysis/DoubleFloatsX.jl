@@ -177,6 +177,19 @@ function samples(rng)
         )
     end
     add!("tiny-pole-offsets", offsets)
+    # next to overflow: lg up to 1.797e308, where (z - 1/2) log z alone would overflow
+    add!(
+        "near-overflow",
+        [
+            Complex(D(2.559e305), D(0)),
+            Complex(D(2.5e305), -D(0)),
+            Complex(D(2.0e305), D(1.0e305)),
+            Complex(D(-1.0e305), D(2.3e305)),
+            Complex(D(1.0e304), D(2.5e305)),
+            Complex(D(-2.5e305), D(0.5)),
+            Complex(D(1.7e305) + 1.7e289, -D(1.7e305)),
+        ],
+    )
     return S
 end
 

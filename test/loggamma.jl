@@ -12,8 +12,8 @@ const SF = SpecialFunctions
 
 # The bound per region, in u. Basis: the largest error against Arb (2026-11-14), over 1100000 points of
 # tools/loggamma/sweep.jl (100000 per band) and 1000000 more in each corner band, where the upward shift meets the strip
-# at Im z = 4: Stirling 4.74, strip 6.36, upward shift 14.52, reflection 15.33; relative in the diamonds 4.00 at 1 and
-# 4.03 at 2.
+# at Im z = 4: Stirling 4.05, strip 6.36, upward shift 14.52, reflection 14.46; relative in the diamonds 4.00 at 1 and
+# 4.03 at 2; the fixture's tiny arguments and pole offsets at most 1.8 and its near-overflow points 0.7.
 const LG_BOUND = (stirling=8, taylor1=5, taylor2=5, reflection=24, strip=8, upward=24)
 
 # the kernel's region of z, by its own tests in its own order
@@ -197,9 +197,11 @@ end
             @test iszero(imag(lg(x, 0.0))) && !signbit(imag(lg(x, 0.0)))
             @test iszero(imag(lg(x, -0.0))) && signbit(imag(lg(x, -0.0)))
         end
-        # large |z|: finite while |z| log |z| is
+        # large |z|: finite while lg is (the fixture's near-overflow class), Inf past it
         @test all(isfinite, reim(lg(1e300, 1e300)))
         @test all(isfinite, reim(lg(-1e300, 0.5)))
+        @test isfinite(real(lg(2.559e305, 0.0)))
+        @test real(lg(2.6e305, 0.0)) == Inf
     end
 
     @testset "Gamma.jl's methods" begin
