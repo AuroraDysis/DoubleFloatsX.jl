@@ -217,7 +217,10 @@ function _loggamma(z::Complex{T}, C::LogGammaConstants{T}) where {T}
     # each factor's argument in (0, π/2)
     r = Int(ceil(C.w - x))
     ζ = Complex(x + r, y)
-    ζinv = inv(ζ)
+    # 1/ζ with one Newton step: inv's own error, up to 5.6 u, would enter all r factors alike, with weight
+    # sum_j |j/(ζ - j)| up to 22; a new name, since the closure below would box a reassigned one
+    ζ0 = inv(ζ)
+    ζinv = ζ0 + ζ0 * (1 - ζ * ζ0)
     return (z - T(0.5)) * _log(ζ) - ζ +
            C.halflog2pi +
            ζinv * _horner(C.stirling, ζinv * ζinv) - _log_prod(j -> 1 - j * ζinv, r, C)
@@ -225,7 +228,7 @@ end
 
 # 106 bits: (w, N) = (16, 21), the cheapest w whose N meets Hare's bound 4 sqrt(πN) |T_N(w)| <= 2^-108; K = 35 Taylor
 # terms meet 2^-108 relative in the diamonds of radius 1/10; ystrip = 4, the largest the strip's branch allows, where
-# the rearranged upward shift above it errs by at most 14.4 u (it erred by 31 u at y = 4 before the rearrangement);
+# the rearranged upward shift above it errs by at most 13.2 u (it erred by 31 u at y = 4 before the rearrangement);
 # KR = 83, past which every term |c_j| |t|^j is below 2^-112 on |t| <= sqrt(1/4 + 4^2)
 const _LOGGAMMA_DOUBLE64 = LogGammaConstants{Double64}(16, 21, 35, 4, 83)
 

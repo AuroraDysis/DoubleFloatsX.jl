@@ -11,7 +11,7 @@ const SF = SpecialFunctions
 # at 1 and 2, normwise relative to |lg|.
 
 # The bound per region, in u. Basis: the largest error over 900000 points against Arb, 100000 per band of
-# tools/loggamma/sweep.jl (2026-11-14): Stirling 5.35, strip 6.43, upward shift 14.36, reflection 12.80; relative in
+# tools/loggamma/sweep.jl (2026-11-14): Stirling 5.35, strip 6.43, upward shift 13.22, reflection 7.58; relative in
 # the diamonds 3.60 at 1 and 3.26 at 2.
 const LG_BOUND = (stirling=8, taylor1=5, taylor2=5, reflection=16, strip=8, upward=16)
 
