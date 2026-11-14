@@ -45,6 +45,7 @@ struct LogGammaConstants{T,NS,NT,NR}
     rgamma::NTuple{NR,T}    # c_j of 1/gamma(1 + t) = sum_j c_j t^j, j = 0, ..., KR
     halflog2pi::T
     logpi::T
+    log2::T
     pi::T
     halfpi::T
     twopi::T
@@ -98,6 +99,7 @@ function LogGammaConstants{T}(w::Int, N::Int, K::Int, ystrip::Int, KR::Int) wher
             ntuple(j -> r(c[j]), KR + 1),
             r(log(2p) / 2),
             r(log(p)),
+            r(log(BigFloat(2))),
             r(p),
             r(p / 2),
             r(2p),
@@ -144,37 +146,43 @@ end
 end
 
 # log sin(πz) for Im z >= 0, z not a pole: the principal branch of Base's log(sinpi(z)), Im z = +0 taken from above.
-# Built from the real sinpi, cospi, sinh and cosh (Base's complex sinpi allocates for this type); x is reduced exactly
-# to [-1/2, 1/2] first, since the type's sinpi rounds its argument to 113 bits and so loses the distance to an
-# integer; the imaginary part of a real argument is set here, since the type's products and log lose a zero's sign.
+# x is reduced exactly to r = x - round(x) first, so the distance to an integer is kept, and the parts
+# sin(πr) cosh(πy) and cos(πr) sinh(πy) are formed in the wide type W (_wide): near a zero of the sine they fall far
+# below T's full-precision floor (sin(π 2^-1000) is about 2^-998, where a Double64's low limb is subnormal), so they
+# are scaled there by a power of two before T holds them, and its log is shifted back by that power times log 2.
+# The imaginary part of a real argument is set here, since T's products and log may lose a zero's sign.
 function _log_sinpi(x::T, y::T, C::LogGammaConstants{T}) where {T}
+    py = _widepi(C) * _wide(y)
     if isinteger(2x)  # sin(πx) is ±0 or ±1 exactly, cos(πx) ±1 or 0, as Base's sinpi takes them
         if isinteger(x)  # y > 0 here: sin(πz) = ±i sinh(πy)
-            return Complex(_logr(_sinh(C.pi * y)), isodd(x) ? -C.halfpi : C.halfpi)
+            return Complex(T(log(sinh(py))), isodd(x) ? -C.halfpi : C.halfpi)
         end
-        return Complex(_logr(_cosh(C.pi * y)), isinteger((2x - 1) / 4) ? zero(T) : C.pi)
+        return Complex(T(log(cosh(py))), isinteger((2x - 1) / 4) ? zero(T) : C.pi)
     end
     n = round(x)
-    s, c = sinpi(x - n), cospi(x - n)  # x - n is exact
+    r = _wide(x - n)  # x - n is exact
+    s, c = sinpi(r), cospi(r)
     if isodd(n)
         s, c = -s, -c
     end
     if iszero(y)  # sin(π(x + i0)) = sin(πx) + i0 cos(πx): the sign of cos(πx) chooses the side of a negative sine
-        return Complex(_logr(abs(s)), signbit(s) ? (signbit(c) ? -C.pi : C.pi) : zero(T))
+        return Complex(T(log(abs(s))), signbit(s) ? (signbit(c) ? -C.pi : C.pi) : zero(T))
     end
-    py = C.pi * y
-    return _log(Complex(s * _cosh(py), c * _sinh(py)))
+    a, b = s * cosh(py), c * sinh(py)
+    e = exponent(max(abs(a), abs(b)))
+    l = _log(Complex(T(ldexp(a, -e)), T(ldexp(b, -e))))
+    return Complex(real(l) + e * C.log2, imag(l))
 end
 
-# the real log, sinh and cosh, each of whose errors enters lg with weight one, scaled by |log| for the log: Double64's
-# own log errs by 2.9 units of 2^-106 of its result and its sinh and cosh by up to 26 relative, so they go through
-# Float128 (113 bits), as Double64's sinpi and cospi do; another type supplies its own
+# The wide type of log sin(πz) and the real log, whose errors enter lg with weight one, the log's scaled by its size:
+# Float128 for Double64 (113 bits, exponents to 2^-16382), as Double64's own sinpi and cospi use, since Double64's
+# log errs by 2.9 units of 2^-106 of its result and its sinh and cosh by up to 26 relative; another type its own
+_wide(x) = x
+_widepi(C::LogGammaConstants) = C.pi
 _logr(x) = log(x)
-_sinh(x) = sinh(x)
-_cosh(x) = cosh(x)
+_wide(x::Double64) = Float128(x)
+_widepi(::LogGammaConstants{Double64}) = _PI_FLOAT128
 _logr(x::Double64) = Double64(log(Float128(x)))
-_sinh(x::Double64) = Double64(sinh(Float128(x)))
-_cosh(x::Double64) = Double64(cosh(Float128(x)))
 
 function _loggamma(z::Complex{T}, C::LogGammaConstants{T}) where {T}
     x, y = reim(z)
@@ -235,5 +243,6 @@ end
 # the rearranged upward shift above it errs by at most 14.5 u (it erred by 31 u at y = 4 before the rearrangement);
 # KR = 83, past which every term |c_j| |t|^j is below 2^-112 on |t| <= sqrt(1/4 + 4^2)
 const _LOGGAMMA_DOUBLE64 = LogGammaConstants{Double64}(16, 21, 35, 4, 83)
+const _PI_FLOAT128 = Float128(π)
 
 SpecialFunctions.loggamma(z::Complex{Double64}) = _loggamma(z, _LOGGAMMA_DOUBLE64)

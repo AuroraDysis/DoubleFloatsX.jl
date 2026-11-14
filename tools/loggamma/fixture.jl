@@ -3,6 +3,9 @@
 #
 #     julia --project=tools/loggamma tools/loggamma/fixture.jl > test/fixtures/loggamma_arb.tsv
 #
+# Arb's working precision starts at 320 bits and doubles until the ball is good to 256 bits, which the inputs next to a
+# pole need; every input enters Arb exactly, at 2200 bits.
+#
 # One tab-separated line per point: the sample class, the input's limbs as hex floats (re hi, re lo, im hi, im lo),
 # the reference's real and imaginary midpoints (36 significant digits) and their radii, each holding the midpoint's
 # decimal rounding besides Arb's own radius and rounded up. An input with a -0.0
@@ -12,10 +15,19 @@
 using Arblib, DoubleFloatsX, Printf, Random
 
 const PREC = 320
-setprecision(BigFloat, PREC)
+const EXACT = 2200  # a Double64 spans at most 2098 bits, from 2^1023 to 2^-1074
+setprecision(BigFloat, EXACT)
 
-big(d::Double64) = BigFloat(HI(d)) + BigFloat(LO(d))  # exact: no input spans more than 320 bits
-acb(z::Complex{Double64}) = Acb(big(real(z)), big(imag(z)); prec=PREC)
+big(d::Double64) = BigFloat(HI(d)) + BigFloat(LO(d))
+acb(z::Complex{Double64}) = Acb(big(real(z)), big(imag(z)); prec=EXACT)
+# Arb's value by f(prec), the precision doubled from `prec` until the ball is good to 256 bits
+function adaptive(f, prec=PREC)
+    while true
+        r = f(prec)
+        (Arblib.rel_accuracy_bits(r) >= 256 || prec >= 8192) && return r, prec
+        prec *= 2
+    end
+end
 hexs(x::Float64) = @sprintf("%a", x)
 limbs(d::Double64) = (hexs(HI(d)), hexs(LO(d)))
 mid(x) = BigFloat(Arblib.midref(x))
@@ -33,12 +45,12 @@ function ball(x, neg::Bool=false)
     return d, repr(Float64(r, RoundUp))
 end
 
-# each stored ball must hold the value Arb gives at twice the precision; the generator stops otherwise
+# each stored ball must hold the value Arb gives from twice the precision used; the generator stops otherwise
 function checked(balls, fine, what)
     for ((d, r), x) in zip(balls, fine)
         abs(parse(BigFloat, d) - mid(x)) + BigFloat(Arb(Arblib.radref(x); prec=PREC)) <=
         parse(Float64, r) ||
-            error("the stored ball misses Arb's $(2PREC)-bit value at $what")
+            error("the stored ball misses Arb's value at twice the precision at $what")
     end
     return balls
 end
@@ -46,10 +58,10 @@ end
 function line(class, z::Complex{Double64})
     conjugated = signbit(imag(z))
     w = acb(conjugated ? conj(z) : z)
-    r = Arblib.lgamma!(Acb(; prec=PREC), w)
+    r, prec = adaptive(p -> Arblib.lgamma!(Acb(; prec=p), w))
     re, im = Arblib.realref(r), Arblib.imagref(r)
     isfinite(mid(re)) || error("Arb returned no finite value at $z")
-    f = Arblib.lgamma!(Acb(; prec=2PREC), Acb(w; prec=2PREC))
+    f, _ = adaptive(p -> Arblib.lgamma!(Acb(; prec=p), w), 2prec)
     bre, bim = checked(
         (ball(re), ball(im, conjugated)),
         (Arblib.realref(f), conjugated ? Arblib.imagref(-f) : Arblib.imagref(f)),
@@ -132,6 +144,39 @@ function samples(rng)
     end
     add!("seams", seams)
     add!("seams-reflected", [1 - z for z in seams if real(1 - z) < 0.5])
+    # tiny arguments, where sin(πz) falls below Double64's full-precision floor, and pole offsets as small as a
+    # subnormal, each side and off the axis
+    D(x) = Double64(x)
+    tiny = Complex{Double64}[]
+    for d in (2.0^-1000, 2.0^-1074, 1e-300, 2.0^-960)
+        append!(
+            tiny,
+            (
+                Complex(D(d), D(0)),
+                Complex(D(0), D(d)),
+                Complex(D(d), D(d)),
+                Complex(-D(d), D(0)),
+                Complex(D(0.3), D(d)),
+                Complex(D(d), D(5)),
+            ),
+        )
+    end
+    add!("tiny", tiny)
+    offsets = Complex{Double64}[]
+    for k in (1, 2, 3, 7, 15, 40), d in (2.0^-1000, 2.0^-1074, 1e-310)
+        append!(
+            offsets,
+            (
+                Complex(D(-k) + d, D(0)),
+                Complex(D(-k) - d, D(0)),
+                Complex(D(-k), D(d)),
+                Complex(D(-k) + d, D(d)),
+                Complex(D(-k) - d, D(2.0^-990)),
+                Complex(D(-k) + d, -D(0)),
+            ),
+        )
+    end
+    add!("tiny-pole-offsets", offsets)
     return S
 end
 
@@ -149,8 +194,7 @@ function hyp2f1_lines()
         X = Complex(x, Double64(0))
         r = Arblib.hypgeom_2f1!(Acb(; prec=PREC), acb(A), acb(B), acb(C), acb(X), 0, PREC)
         re, im = Arblib.realref(r), Arblib.imagref(r)
-        big2 = (Acb(acb(w); prec=2PREC) for w in (A, B, C, X))
-        f = Arblib.hypgeom_2f1!(Acb(; prec=2PREC), big2..., 0, 2PREC)
+        f = Arblib.hypgeom_2f1!(Acb(; prec=2PREC), acb(A), acb(B), acb(C), acb(X), 0, 2PREC)
         bre, bim = checked((ball(re), ball(im)), (Arblib.realref(f), Arblib.imagref(f)), x)
         push!(
             out,
