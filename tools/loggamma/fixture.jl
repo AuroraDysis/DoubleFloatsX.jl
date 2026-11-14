@@ -4,7 +4,8 @@
 #     julia --project=tools/loggamma tools/loggamma/fixture.jl > test/fixtures/loggamma_arb.tsv
 #
 # One tab-separated line per point: the sample class, the input's limbs as hex floats (re hi, re lo, im hi, im lo),
-# the reference's real and imaginary midpoints (36 significant digits) and their ball radii. An input with a -0.0
+# the reference's real and imaginary midpoints (36 significant digits) and their radii, each holding the midpoint's
+# decimal rounding besides Arb's own radius and rounded up. An input with a -0.0
 # imaginary part on the cut is given the conjugate of Arb's value at +0.0 (lg(conj z) = conj(lg(z))), since Arb
 # takes an exact real input from above. The 2F1 lines carry the limbs of a, b, c and x and the reference.
 
@@ -18,25 +19,44 @@ acb(z::Complex{Double64}) = Acb(big(real(z)), big(imag(z)); prec=PREC)
 hexs(x::Float64) = @sprintf("%a", x)
 limbs(d::Double64) = (hexs(HI(d)), hexs(LO(d)))
 mid(x) = BigFloat(Arblib.midref(x))
-rad(x) = Float64(Arblib.radref(x))
 dec(x::BigFloat) = @sprintf("%.35e", x)
+# the stored ball of a part, its midpoint negated when `neg`: the decimal midpoint, and a radius that holds Arb's
+# radius, the decimal rounding of the midpoint and the 320-bit parse of that decimal, rounded up to a Float64 printed
+# so that it parses back exactly
+function ball(x, neg::Bool=false)
+    m = neg ? -mid(x) : mid(x)
+    d = dec(m)
+    r =
+        BigFloat(Arb(Arblib.radref(x); prec=PREC)) +
+        abs(parse(BigFloat, d) - m) +
+        abs(m) * BigFloat(2)^(2 - PREC)
+    return d, repr(Float64(r, RoundUp))
+end
+
+# each stored ball must hold the value Arb gives at twice the precision; the generator stops otherwise
+function checked(balls, fine, what)
+    for ((d, r), x) in zip(balls, fine)
+        abs(parse(BigFloat, d) - mid(x)) + BigFloat(Arb(Arblib.radref(x); prec=PREC)) <=
+        parse(Float64, r) ||
+            error("the stored ball misses Arb's $(2PREC)-bit value at $what")
+    end
+    return balls
+end
 
 function line(class, z::Complex{Double64})
     conjugated = signbit(imag(z))
-    r = Arblib.lgamma!(Acb(; prec=PREC), acb(conjugated ? conj(z) : z))
+    w = acb(conjugated ? conj(z) : z)
+    r = Arblib.lgamma!(Acb(; prec=PREC), w)
     re, im = Arblib.realref(r), Arblib.imagref(r)
     isfinite(mid(re)) || error("Arb returned no finite value at $z")
+    f = Arblib.lgamma!(Acb(; prec=2PREC), Acb(w; prec=2PREC))
+    bre, bim = checked(
+        (ball(re), ball(im, conjugated)),
+        (Arblib.realref(f), conjugated ? Arblib.imagref(-f) : Arblib.imagref(f)),
+        z,
+    )
     return join(
-        (
-            class,
-            limbs(real(z))...,
-            limbs(imag(z))...,
-            dec(mid(re)),
-            dec(conjugated ? -mid(im) : mid(im)),
-            @sprintf("%.3e", rad(re)),
-            @sprintf("%.3e", rad(im)),
-        ),
-        '\t',
+        (class, limbs(real(z))..., limbs(imag(z))..., bre[1], bim[1], bre[2], bim[2]), '\t'
     )
 end
 
@@ -129,16 +149,19 @@ function hyp2f1_lines()
         X = Complex(x, Double64(0))
         r = Arblib.hypgeom_2f1!(Acb(; prec=PREC), acb(A), acb(B), acb(C), acb(X), 0, PREC)
         re, im = Arblib.realref(r), Arblib.imagref(r)
+        big2 = (Acb(acb(w); prec=2PREC) for w in (A, B, C, X))
+        f = Arblib.hypgeom_2f1!(Acb(; prec=2PREC), big2..., 0, 2PREC)
+        bre, bim = checked((ball(re), ball(im)), (Arblib.realref(f), Arblib.imagref(f)), x)
         push!(
             out,
             join(
                 (
                     "2F1",
                     (l for w in (A, B, C, X) for p in reim(w) for l in limbs(p))...,
-                    dec(mid(re)),
-                    dec(mid(im)),
-                    @sprintf("%.3e", rad(re)),
-                    @sprintf("%.3e", rad(im)),
+                    bre[1],
+                    bim[1],
+                    bre[2],
+                    bim[2],
                 ),
                 '\t',
             ),
