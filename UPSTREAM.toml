@@ -38,7 +38,7 @@ summary = "round and RoundNearest tie to even, RoundNearestTiesAway and RoundNea
 
 [[patch]]
 id = "DFX-005"
-summary = "loggamma(::Complex{Double64}) on the continuous branch, allocation-free, an empirical bound of 24 units of 2^-106 of max(1, |lg|) per part (14.5 measured against Arb; not a derived bound, not admitted), in SpecialFunctions and, through the Gamma extension, Gamma.jl; Gamma.gamma, Gamma.loggamma and Gamma.logabsgamma of a Double64"
+summary = "loggamma(::Complex{Double64}) on the continuous branch, allocation-free, a measured bound, not proven: 14.5 units of 2^-106 of max(1, |lg|) per part against Arb, tested at 24, its derivation pending and not admitted, in SpecialFunctions and, through the Gamma extension, Gamma.jl; Gamma.gamma, Gamma.loggamma and Gamma.logabsgamma of a Double64"
 
 [[patch]]
 id = "DFX-006"
