@@ -8,9 +8,10 @@
 # line to override (`just hostq_mem=2 _jl-hostq test`)
 hostq_mem := ""
 
-# The memory of `_jl-hostq test`, in GiB: the suite peaked at 1.01 GB resident in 75 s (one process, with Gamma,
-# HypergeometricFunctions and TaylorIntegration in the test targets, 2026-11-14), plus about 50 %
-test_mem := "1.5"
+# The memory of `_jl-hostq test`, in GiB: the suite peaked at 1.42 GB resident (one process, with Gamma,
+# HypergeometricFunctions and TaylorIntegration in the test targets and the loggamma fixture of 2733 points, a
+# hostq job of 2026-11-14), plus about 40 %
+test_mem := "2"
 
 # List the recipes
 default:

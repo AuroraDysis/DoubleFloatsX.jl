@@ -55,7 +55,7 @@ Tags name the enforcement: `[HARD - pre-commit]` the commit guard `.githooks/pre
 - `[GUIDANCE]` Versions are the family's SemVer (`0.x` until the qualified `1.0.0`), each an annotated tag `vX.Y.Z` registered
   in the family's registry by `just release`; upstream's tags are kept as `upstream/<tag>`.
 - `[GUIDANCE]` Julia on the operator's Macs: a single process measured under 1.5 GiB that finishes in minutes runs
-  directly (the package's test suite, 1.01 GB and 75 s, may); the release's steps go through hostq (`just _jl-hostq
+  directly (the package's test suite, 1.42 GB and under 2 minutes, may); the release's steps go through hostq (`just _jl-hostq
   <recipe>`).
 - `[GUIDANCE]` Commits: one logical unit each, the body says why; never commit what breaks a passing test. A push
   goes only through `just push <ref>`, on the controller's word.
