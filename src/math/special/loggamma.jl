@@ -208,7 +208,8 @@ function _loggamma(z::Complex{T}, C::LogGammaConstants{T}) where {T}
         u = Complex(x - m, y)
         # lg(u) = -log(1/gamma(u)), the Taylor series of 1/gamma(1 + t) at t = u - 1; |Im lg(u)| < 3.01 < π there, so
         # the principal log is lg's branch
-        lu = -_log(_horner(C.rgamma, u - 1))
+        l = _log(_horner(C.rgamma, u - 1))
+        lu = Complex(-real(l), zero(T) - imag(l))  # not -l: the positive axis keeps a +0.0 imaginary part
         return m == 0 ? lu : lu + _log_prod(j -> u + (j - 1), m, C)
     end
     # lg(z) = lg(ζ) - log(z (z + 1) ... (z + r - 1)), ζ = z + r, Re ζ >= w, with each log(z + k) written as

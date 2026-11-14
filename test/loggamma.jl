@@ -191,7 +191,11 @@ end
             v = lg(-k, 0.0)
             @test real(v) == Inf && nearπ(imag(v), -k)
         end
-        @test signbit(imag(lg(2.5, -0.0)))
+        # the positive axis: a zero imaginary part keeps its sign, in every region the axis crosses
+        for x in (0.3, 0.7, 1.02, 1.3, 2.03, 2.5, 5.5, 20.0)
+            @test iszero(imag(lg(x, 0.0))) && !signbit(imag(lg(x, 0.0)))
+            @test iszero(imag(lg(x, -0.0))) && signbit(imag(lg(x, -0.0)))
+        end
         # large |z|: finite while |z| log |z| is
         @test all(isfinite, reim(lg(1e300, 1e300)))
         @test all(isfinite, reim(lg(-1e300, 0.5)))
