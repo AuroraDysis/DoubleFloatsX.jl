@@ -8,8 +8,8 @@
 # line to override (`just hostq_mem=2 _jl-hostq test`)
 hostq_mem := ""
 
-# The memory of `_jl-hostq test`, in GiB: the suite peaked at 0.81 GB resident in 53 s (upstream v1.12.0, one process,
-# 2026-11-12), plus about 85 %
+# The memory of `_jl-hostq test`, in GiB: the suite peaked at 1.01 GB resident in 75 s (one process, with Gamma,
+# HypergeometricFunctions and TaylorIntegration in the test targets, 2026-11-14), plus about 50 %
 test_mem := "1.5"
 
 # List the recipes
