@@ -27,4 +27,5 @@ Modifications (each changed contract is a row of README.md, "Differences from up
   write and qualify it, tools/loggamma/; Gamma and HypergeometricFunctions added to the test targets.
 - 2026-11-14: TaylorIntegration's internal _exact_step given a Double64 method in the package extension
   DoubleFloatsXTaylorIntegrationExt over the weak dependency TaylorIntegration (DFX-006), in
-  ext/DoubleFloatsXTaylorIntegrationExt.jl, with test/taylorintegration.jl; TaylorIntegration and Logging added to the test targets.
+  ext/DoubleFloatsXTaylorIntegrationExt.jl, with test/taylorintegration.jl; TaylorIntegration and Logging added to the
+  test targets; version 0.3.0, with DFX-005.
