@@ -25,3 +25,6 @@ Modifications (each changed contract is a row of README.md, "Differences from up
   Gamma.logabsgamma of a Double64 (DFX-005); in src/math/special/loggamma.jl, ext/DoubleFloatsXGammaExt.jl and
   src/DoubleFloatsX.jl, with test/loggamma.jl, its Arb fixture test/fixtures/loggamma_arb.tsv and the tools that
   write and qualify it, tools/loggamma/; Gamma and HypergeometricFunctions added to the test targets.
+- 2026-11-14: TaylorIntegration's internal _exact_step given a Double64 method in the package extension
+  DoubleFloatsXTaylorIntegrationExt over the weak dependency TaylorIntegration (DFX-006), in
+  ext/DoubleFloatsXTaylorIntegrationExt.jl, with test/taylorintegration.jl; TaylorIntegration and Logging added to the test targets.

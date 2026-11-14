@@ -70,6 +70,7 @@ include("eigen.jl")
 include("matrixfunctions.jl")
 include("special_functions.jl")
 include("loggamma.jl")
+include("taylorintegration.jl")
 
 include("concrete_accuracy.jl")
 include("function_accuracy.jl")

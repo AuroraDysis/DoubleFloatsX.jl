@@ -17,9 +17,11 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [weakdeps]
 Gamma = "a0844989-3bd2-4988-8bea-c9407ab0941b"
+TaylorIntegration = "92b13dbe-c966-51a2-8445-caca9f8a7d42"
 
 [extensions]
 DoubleFloatsXGammaExt = "Gamma"
+DoubleFloatsXTaylorIntegrationExt = "TaylorIntegration"
 
 [compat]
 Gamma = "1.2"
@@ -28,12 +30,15 @@ GenericSchur = "0.5 - 0.7"
 HypergeometricFunctions = "0.3"
 Quadmath = "1"
 SpecialFunctions = "1 - 2"
+TaylorIntegration = "0.18.19"
 julia = "1.10"
 
 [extras]
 Gamma = "a0844989-3bd2-4988-8bea-c9407ab0941b"
 HypergeometricFunctions = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+TaylorIntegration = "92b13dbe-c966-51a2-8445-caca9f8a7d42"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Gamma", "HypergeometricFunctions", "Test"]
+test = ["Gamma", "HypergeometricFunctions", "Logging", "TaylorIntegration", "Test"]
