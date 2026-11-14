@@ -106,6 +106,29 @@ ti_crossing(dx, x, p, t) = (true, x[1])
             landed &= t == tm
         end
         @test landed
+        # tmax with a zero low limb, a -0.0 one included (Double64's == tells it from +0.0), from both sides
+        landed = true
+        for tm in (
+                Double64(3),
+                -Double64(3),
+                -1 * Double64(3),
+                Double64(3.0, -0.0),
+                Double64(0),
+                -Double64(0),
+            ),
+            _ in 1:500
+
+            t = dd(20rand(rng) - 10)
+            s = tm > t ? 1 : -1
+            for _ in 1:3
+                s * t < s * tm || break
+                δ = TaylorIntegration._exact_step(t, s * (abs(tm - t) + Double64(1)), tm, s)
+                iszero(δ) && break
+                t += δ
+            end
+            landed &= !(s * t < s * tm) && !(s * t > s * tm)
+        end
+        @test landed
         alloc(f, a...) = (f(a...); f(a...); @allocated f(a...))
         @test alloc(TaylorIntegration._exact_step, a, Double64(5), b, 1) == 0
         @test alloc(

@@ -9,8 +9,12 @@
 # uncalled, and test/taylorintegration.jl, whole Double64 integrations against their closed forms, then fails.
 module DoubleFloatsXTaylorIntegrationExt
 
-using DoubleFloatsX: Double64, HI
+using DoubleFloatsX: Double64, HI, LO
 using TaylorIntegration: TaylorIntegration
+
+# equal values, limb by limb in IEEE: Double64's own == tells a -0.0 low limb from +0.0, so Double64(3.0, -0.0) as tmax
+# would never be "reached"
+_same(a::Double64, b::Double64) = HI(a) == HI(b) && LO(a) == LO(b)
 
 function TaylorIntegration._exact_step(
     t0::Double64, δt::Double64, tmax::Double64, sign_tstep::Int
@@ -19,9 +23,9 @@ function TaylorIntegration._exact_step(
     d = tmax - t0
     t1 = t0 + δt
     if s * δt < s * d && s * t1 < s * tmax  # an interior step, which ends before tmax
-        return t1 == t0 ? zero(δt) : δt
+        return _same(t1, t0) ? zero(δt) : δt
     end
-    t0 + d == tmax && return d  # the step that reaches tmax lands on it
+    _same(t0 + d, tmax) && return d  # the step that reaches tmax lands on it
     # t0 + (tmax - t0) misses tmax, as when that difference needs more than two limbs: stop first at t1 = t0 + δ before
     # tmax, δ the difference's high limb, its Float64 neighbour toward zero, or half the difference, taking the first
     # from which t1 + (tmax - t1) lands, as the callers add; else the first that moves t0 and passes no tmax
@@ -29,7 +33,7 @@ function TaylorIntegration._exact_step(
     δs = (Double64(h), Double64(s > 0 ? prevfloat(h) : nextfloat(h)), d * 0.5)
     for δ in δs
         t1 = t0 + δ
-        s * t0 < s * t1 < s * tmax && t1 + (tmax - t1) == tmax && return δ
+        s * t0 < s * t1 < s * tmax && _same(t1 + (tmax - t1), tmax) && return δ
     end
     for δ in δs
         t1 = t0 + δ
