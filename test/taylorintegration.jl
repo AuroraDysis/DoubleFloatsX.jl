@@ -16,6 +16,7 @@ using TaylorIntegration
 
 ti_rhs(x, p, t) = im * x
 @taylorize ti_rhs_parsed(x, p, t) = im * x
+ti_stiff(x, p, t) = Double64(1e31) * x  # steps of about 1e-37, below the time's resolution at 1
 
 @testset "TaylorIntegration with Double64 time" begin
     setprecision(BigFloat, 256) do
@@ -40,6 +41,26 @@ ti_rhs(x, p, t) = im * x
             exact = big2(ya) * cis(big2(sol.t[end]) - big2(a))
             @test abs(big2(sol.x[end]) - exact) <= length(sol.t) * big2(abstol)
         end
+        # a step too small to move t0 is zero, so the callers stop rather than repeat a time
+        @test iszero(
+            TaylorIntegration._exact_step(
+                Double64(1.0, 2.0^-54), Double64(2.0^-200), Double64(3), 1
+            ),
+        )
+        sol = @test_logs (:warn, r"below the resolution") taylorinteg(
+            ti_stiff,
+            Double64(1),
+            Double64(1.0, 2.0^-54),
+            Double64(3),
+            5,
+            abstol;
+            maxsteps=20,
+        )
+        @test allunique(sol.t)
+        alloc(f, a...) = (f(a...); f(a...); @allocated f(a...))
+        @test alloc(
+            TaylorIntegration._exact_step, Double64(1), Double64(0.5), Double64(3), 1
+        ) == 0
     end
 end
 
